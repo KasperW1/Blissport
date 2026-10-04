@@ -863,9 +863,17 @@ function lmBuild(l){const d=D[ID[l.d]],did=ID[l.d],x=l.x,y=l.y;let top=l.h||2;
   SKEL.push({x,y,w:3.6,dp:3,h:.6,r:-.3,c:[.7,.7,.7],did});
   const [gx,gy]=L2W(x,y,-.3,1.7,1.4);box(CYL,gx,gy,.1,.1,1.6,0,[.3,.3,.3],did);box(PROP,gx,gy,.5,.5,.4,-.3,[.2,.18,.16],did,1.6);
   LAMPS.push({x:gx,y:gy,h:2.1,c:[1,.55,.25]},{x,y:y-1.4,h:.6,c:[1,.4,.15]});top=2.2;break;}
- case 'unveiling':{box(PROP,x,y,1.4,.9,.35,0,[.18,.12,.12],did);outline(x,y,1.4,.9,.35,0,[1,.4,.15],did,.04);
-  for(let q=0;q<16;q++){const a=q/16*6.283;LAMPS.push({x:x+Math.cos(a)*1.8,y:y+Math.sin(a)*1.8,h:.45,c:[1,.5,.25]});}
-  for(const [ox,oy] of [[-1.5,-1.5],[1.5,-1.5],[-1.5,1.5],[1.5,1.5]]){box(CYL,x+ox,y+oy,.08,.08,2,0,[.3,.3,.32],did);box(NEON,x+ox,y+oy,.3,.3,.12,0,[1,.85,.6],did,2);}top=.4;break;}
+ case 'unveiling':{// an old factory hall that only looks abandoned: orange light leaks through dirty windows, roof gaps and the open loading door
+  const r=.3,BR=[.36,.24,.18],RF=[.2,.17,.16],GLOW=[1,.45,.15],W=3.1,Dp=2.2,H=1.9,at=(u,v)=>L2W(x,y,r,u,v);
+  box(BODY,x,y,W,Dp,H,r,BR,did,0,{win:[.55,3,.42]});
+  for(let q=0;q<6;q++){const [px,py]=at(-W/2+(q+.5)*W/6,0);
+   if(q===1||q===4)box(NEON,px,py,W/6*.9,Dp*.9,.015,r,GLOW.map(v=>v*.55),did,H+.005);else box(ROOF,px,py,W/6,Dp,.38,r,RF,did,H);}
+  {const [px,py]=at(W*.33,-Dp*.25);box(CYL,px,py,.3,.3,1.1,0,[.44,.25,.18],did,H);box(CYL,px,py,.36,.36,.09,0,[.1,.09,.09],did,H+1.05);}
+  {const [px,py]=at(0,Dp/2+.012);box(NEON,px,py,1,.02,1.05,r,GLOW,did,.02);const [lx,ly]=at(0,Dp/2-.3);LAMPS.push({x:lx,y:ly,h:.5,c:[1,.5,.2]});}
+  for(const s of [-1,1]){const [px,py]=at(s*1.05,Dp/2+.9);box(CYL,px,py,.07,.07,1.9,0,[.28,.28,.3],did);box(NEON,px,py,.26,.12,.12,r,[1,.92,.75],did,1.9);LAMPS.push({x:px,y:py,h:2.02,c:[1,.9,.7]});
+   const [bx,by]=at(s*1.6,Dp/2+.3);box(CYL,bx,by,.13,.13,.2,0,[.22,.16,.12],did);LAMPS.push({x:bx,y:by,h:.3,c:[1,.45,.1]});}
+  for(let q=0;q<4;q++){const [px,py]=at(R(-1.4,1.4),Dp/2+R(1.25,1.75));box(PROP,px,py,.38,.17,.12,r+R(-.6,.6),pick([[.12,.12,.14],[.3,.06,.06],[.2,.2,.22]]),did);}
+  top=H+.5;break;}
  default:{box(BODY,x,y,l.w||1.3,l.dp||1.3,top,0,n01(mix(hx(l.c||d.col),[14,16,28],.6)),did,0,{win:[.8,d.win[1],.3]});outline(x,y,l.w||1.3,l.dp||1.3,top,0,n01(mix(hx(d.col),[255,255,255],.25)),did,.09);}}
  l.top=top;}
 // ---------------- THE THREE VELVETS (custom model) ----------------
@@ -1405,6 +1413,78 @@ function cargoDocks(){
  [[103.8,53.8,1.2],[96,65.2,-.6],[92,46.3,.2]].forEach(([x,y,a])=>{if(landAt(x,y))return;const ux=Math.cos(a),uy=Math.sin(a);
   hullMesh(x,y,-a,.8,.32,.18,-.03,0x8a1c1c);box(PROP,x-ux*.05,y-uy*.05,.3,.22,.18,-a,[.95,.95,.95],FNG,.15);box(CYL,x-ux*.18,y-uy*.18,.08,.08,.2,0,[.1,.1,.1],FNG,.3);
   LAMPS.push({x,y,h:.45,c:[1,1,.95]},{x:x+ux*.38,y:y+uy*.38,h:.2,c:[1,.85,.5]});});}
+// ---------------- THE TIN YARD: abandoned factories, dead malls, run-down markets, derelict lots ----------------
+function tinYard(){
+ const id=ID.tin,d=D[id],st=ST[id],P=GP[id],s=P.s,sw=P.sw,r=-d.st[1],GRASS=()=>n01(mix([30,62,28],[60,88,40],rand()));
+ const inD=(x,y)=>landAt(x,y)&&distAt(x,y)===id,ok=(x,y)=>inD(x,y)&&!excluded(x,y),toXY=(u,v)=>gI(P,u,v);
+ // clear the generic buildings; the district is rebuilt block by block
+ for(const L of [BODY,ROOF,CYL,PROP,NEON,TREES,SKEL])for(let i=L.length-1;i>=0;i--)if(L[i].did===id)L.splice(i,1);
+ for(let i=LAMPS.length-1;i>=0;i--)if(distAt(LAMPS[i].x,LAMPS[i].y)===id)LAMPS.splice(i,1);
+ const ruin=(bu0,bu1,bv0,bv1,n)=>{for(let q=0;q<n;q++){const [px,py]=toXY(R(bu0,bu1),R(bv0,bv1));if(!ok(px,py))continue;const k=rand();
+  if(k<.45)box(PROP,px,py,R(.3,.9),R(.3,.8),R(.06,.3),R(0,3),[.24,.21,.2],id);
+  else if(k<.85)TREES.push({x:px,y:py,w:R(.35,.75),dp:R(.35,.75),h:R(.3,.8),r:rand()*6,c:GRASS(),did:id,y0:0});
+  else box(BODY,px,py,R(.5,1),R(.5,1),R(.3,.8),R(0,3),[.2,.18,.18],id,0,{win:[0,0,0]});}};
+ const barrel=(px,py)=>{if(!ok(px,py))return;box(CYL,px,py,.13,.13,.2,0,[.22,.16,.12],id);LAMPS.push({x:px,y:py,h:.3,c:[1,.45,.1]});};
+ // abandoned factory halls: rusting walls, dead windows, sawtooth roofs with collapsed teeth, smokestacks, water towers, trees on the roof
+ const factory=(bu0,bu1,bv0,bv1)=>{const bw=bu1-bu0,bh=bv1-bv0,nu=Math.max(1,Math.round(bw/1.7)),nv=Math.max(1,Math.round(bh/1.9)),cu=(bw-.2)/nu,cv=(bh-.2)/nv;
+  // halls packed in a grid across the block with narrow service gaps between them
+  for(let ga=0;ga<nu;ga++)for(let gb=0;gb<nv;gb++){if(rand()<.08)continue;
+   const hw=cu*R(.78,.94),hd=cv*R(.72,.92),uc=bu0+.1+(ga+.5)*cu+R(-.05,.05),hv=bv0+.1+(gb+.5)*cv+R(-.05,.05),hu0=uc-hw/2,[x,y]=toXY(uc,hv);
+   if(!ok(x,y)||!ok(...toXY(uc-hw/2,hv-hd/2))||!ok(...toXY(uc+hw/2,hv+hd/2))||!ok(...toXY(uc-hw/2,hv+hd/2))||!ok(...toXY(uc+hw/2,hv-hd/2)))continue;const h=R(1,2.3);
+   box(BODY,x,y,hw,hd,h,r,n01(mix(hx(pick(['#7a4a32','#5a4a40','#8a6a52','#4a4440','#9a5a3a'])),[20,20,24],.75)),id,0,{win:[.03,3,.42]});
+   const teeth=Math.max(3,Math.round(hw/.5));
+   for(let q=0;q<teeth;q++){if(rand()<.25)continue;const [px,py]=toXY(hu0+(q+.5)*hw/teeth,hv);box(ROOF,px,py,hw/teeth,hd,.38,r,[.2,.17,.16],id,h);}
+   if(rand()<.35){const [px,py]=toXY(hu0+hw*R(.15,.85),hv+hd*R(-.3,.3)),ch=R(.8,1.5),broken=rand()<.3;
+    box(PROP,px,py,.5,.5,.35,r,[.36,.2,.15],id,h);box(CYL,px,py,.3,.3,broken?ch*.55:ch,0,[.44,.25,.18],id,h+.3);
+    if(!broken)box(CYL,px,py,.36,.36,.1,0,[.1,.09,.09],id,h+.2+ch);else box(PROP,px,py,.2,.14,.12,R(0,3),[.36,.2,.15],id,h+.3+ch*.55);}
+   if(rand()<.25){const [px,py]=toXY(hu0+hw*R(.2,.8),hv);for(const [ox,oy] of [[-.15,-.15],[.15,-.15],[-.15,.15],[.15,.15]])box(CYL,px+ox,py+oy,.03,.03,.9,0,[.25,.18,.14],id,h);
+    box(CYL,px,py,.5,.5,.5,0,[.32,.22,.16],id,h+.9);box(ROOF,px,py,.55,.55,.25,0,[.25,.16,.12],id,h+1.4);}
+   if(rand()<.45)for(let q=0;q<2;q++){const [px,py]=toXY(hu0+hw*R(.1,.9),hv+hd*R(-.35,.35));TREES.push({x:px,y:py,w:R(.35,.6),dp:R(.35,.6),h:R(.4,.7),r:rand()*6,c:GRASS(),did:id,y0:h+.1});}
+   if(rand()<.5){const [px,py]=toXY(hu0+hw*R(.2,.8),hv+hd/2+.18);box(PROP,px,py,.6,.3,.22,r,[.3,.29,.28],id);}}
+  if(rand()<.4){const [x,y]=toXY((bu0+bu1)/2,(bv0+bv1)/2);SKEL.push({x,y,w:bw-.1,dp:bh-.1,h:.45,r,c:[.55,.55,.55],did:id});}
+  ruin(bu0,bu1,bv0,bv1,5);};
+ // dead shopping mall: concrete skeleton with missing slabs and rebar, collapsed atrium dome frame, one gutted storefront wing, flickering sign
+ const mall=(bu0,bu1,bv0,bv1)=>{const mu0=bu0+.3,mu1=bu1-.3,mv0=bv0+.3,mv1=bv1-.3,nu=Math.max(2,Math.round(mu1-mu0)),nv=Math.max(2,Math.round(mv1-mv0)),du=(mu1-mu0)/nu,dv=(mv1-mv0)/nv,lev=rand()<.5?3:2,LH=.85,CON=[.48,.47,.45];
+  const [sx,sy]=toXY((mu0+mu1)/2,mv1-dv*.55);if(!ok(sx,sy))return ruin(bu0,bu1,bv0,bv1,8);
+  box(BODY,sx,sy,mu1-mu0,dv*1.1,LH,r,[.3,.29,.28],id,0,{win:[.05,3,.4]});
+  for(let iu=0;iu<=nu;iu++)for(let iv=0;iv<=nv;iv++){const [px,py]=toXY(mu0+iu*du,mv0+iv*dv);if(!ok(px,py))continue;const hh=LH*lev*(rand()<.15?R(.4,.8):1);
+   box(PROP,px,py,.09,.09,hh,r,CON,id);if(rand()<.3)box(PROP,px,py,.035,.035,.25,r+R(-.3,.3),[.4,.3,.25],id,hh);}
+  for(let L=1;L<=lev;L++)for(let iu=0;iu<nu;iu++)for(let iv=0;iv<nv;iv++){if(rand()<(L===lev?.45:.22))continue;const [px,py]=toXY(mu0+(iu+.5)*du,mv0+(iv+.5)*dv);
+   if(ok(px,py))box(PROP,px,py,du*1.02,dv*1.02,.07,r,CON,id,L*LH-.07);}
+  const vx=-Math.sin(-r),vy=Math.cos(-r),sg=sign('MALL',sx+vx*(dv*.56+.03),sy+vy*(dv*.56+.03),LH+.35,1.6,r,'#ff4d6d'),seed=rand()*100;
+  FRAMEHOOKS.push(t=>{const on=Math.sin(t*13.1+seed)>.15&&Math.sin(t*2.3+seed*3)>-.55;sg.material.opacity=(on?.85:.08)*(1-.6*(DN.day||0));});
+  for(let u=bu0+.2;u<bu1-.1;u+=.32){const [px,py]=toXY(u,bv0+.15);if(ok(px,py))box(PROP,px,py,.015,.26,.006,r,[.42,.42,.4],id,.005);}
+  for(let q=0;q<3;q++){const [px,py]=toXY(R(bu0+.1,bu1-.1),bv0+.15);if(ok(px,py))box(PROP,px,py,.38,.17,.12,r+R(-.4,.4),pick([[.35,.18,.12],[.2,.22,.26],[.3,.28,.24]]),id);}
+  ruin(bu0,bu1,bv0,bv1,4);};
+ // run-down market: rows of makeshift stalls under faded tarps, crates, string lights, burning barrels
+ const market=(bu0,bu1,bv0,bv1)=>{const TARP=[[.6,.18,.14],[.15,.3,.5],[.2,.42,.22],[.75,.5,.12],[.5,.2,.45],[.7,.68,.6]];
+  for(let v=bv0+.35;v<bv1-.3;v+=.75){let prev=null;
+   for(let u=bu0+.3;u<bu1-.25;u+=R(.42,.58)){if(rand()<.15)continue;const [px,py]=toXY(u,v);if(!ok(px,py))continue;
+    box(PROP,px,py,.36,.24,.28,r,[.3,.26,.22],id);box(PROP,px,py,.46,.4,.025,r+R(-.08,.08),pick(TARP).map(c=>c*R(.75,1)),id,.55);
+    for(const ou of [-.2,.2]){const [qx,qy]=toXY(u+ou,v-.17);box(CYL,qx,qy,.02,.02,.55,0,[.25,.22,.2],id);}
+    if(rand()<.5){const [qx,qy]=toXY(u+R(-.15,.15),v+.28);box(PROP,qx,qy,.14,.14,.12,r+R(0,1),[.45,.33,.2],id);}
+    if(prev&&rand()<.7)LAMPS.push({x:(px+prev[0])/2,y:(py+prev[1])/2,h:.62,c:pick([[1,.78,.45],[1,.55,.3],[1,.4,.45]])});prev=[px,py];}}
+  for(let q=0;q<2;q++)barrel(...toXY(R(bu0+.3,bu1-.3),R(bv0+.3,bv1-.3)));};
+ // derelict lot: faded parking bays, wrecked cars, rubble and weeds
+ const lot=(bu0,bu1,bv0,bv1)=>{for(let u=bu0+.3;u<bu1-.2;u+=.32){const [px,py]=toXY(u,bv0+.5);if(ok(px,py))box(PROP,px,py,.015,.45,.006,r,[.42,.42,.4],id,.005);}
+  for(let q=0;q<3;q++){if(rand()<.4)continue;const [px,py]=toXY(R(bu0+.4,bu1-.4),R(bv0+.4,bv1-.4));if(!ok(px,py))continue;
+   box(PROP,px,py,.38,.17,.12,r+R(-.5,.5),pick([[.35,.18,.12],[.2,.22,.26],[.3,.28,.24]]),id);box(PROP,px,py,.2,.15,.08,r+R(-.5,.5),[.18,.16,.15],id,.12);}
+  barrel(...toXY(R(bu0+.3,bu1-.3),R(bv0+.3,bv1-.3)));ruin(bu0,bu1,bv0,bv1,9);};
+ // walk the district's street blocks and give each one a fate
+ let u0=1e9,u1=-1e9,v0=1e9,v1=-1e9;
+ for(let a=0;a<=6;a++)for(let b=0;b<=6;b++){const [U,V]=gF(P,st.x0+(st.x1-st.x0)*a/6,st.y0+(st.y1-st.y0)*b/6);u0=Math.min(u0,U);u1=Math.max(u1,U);v0=Math.min(v0,V);v1=Math.max(v1,V);}
+ const LU=[],LV=[];
+ for(let i=Math.floor((u0-sw/2)/s)-1;i<=Math.ceil((u1-sw/2)/s)+1;i++)if(!gMiss(P,i,0))LU.push(i);
+ for(let j=Math.floor((v0-sw/2)/s)-1;j<=Math.ceil((v1-sw/2)/s)+1;j++)if(!gMiss(P,j,50))LV.push(j);
+ for(let ia=0;ia<LU.length-1;ia++)for(let ib=0;ib<LV.length-1;ib++){
+  const bu0=LU[ia]*s+sw,bu1=LU[ia+1]*s,bv0=LV[ib]*s+sw,bv1=LV[ib+1]*s,[cx,cy]=toXY((bu0+bu1)/2,(bv0+bv1)/2);
+  const good=[[bu0+.2,bv0+.2],[bu1-.2,bv0+.2],[bu0+.2,bv1-.2],[bu1-.2,bv1-.2]].filter(q=>ok(...toXY(q[0],q[1]))).length;
+  if(!inD(cx,cy)&&good===0)continue;
+  if(!ok(cx,cy)||good<3){factory(bu0,bu1,bv0,bv1);continue;} // edge blocks: halls wherever they fit
+  const h=hash(LU[ia]*31+7,LV[ib]*17+3),big=(bu1-bu0)*(bv1-bv0)>9;
+  const use=big?(h<.3?'mall':'factory'):(h<.72?'factory':h<.86?'market':'lot');
+  ({mall,factory,market,lot})[use](bu0,bu1,bv0,bv1);
+  if(rand()<.35){const [px,py]=toXY(bu0-sw*.5+.05,R(bv0,bv1));barrel(px,py);}}}
 function gantry(cx,cy,nx,ny,did){const r=-Math.atan2(ny,nx),C=[.75,.22,.1],ux=-ny,uy=nx;
  for(const a of [-.35,.35])for(const b of [-.3,.45])box(PROP,cx+ux*a+nx*b,cy+uy*a+ny*b,.08,.08,2.3,r,C,did);
  box(PROP,cx+nx*.075,cy+ny*.075,.85,.8,.1,r,C,did,2.25);box(PROP,cx+nx*.6,cy+ny*.6,3.4,.16,.14,r,C,did,2.45);box(PROP,cx-nx*.55,cy-ny*.55,.55,.5,.38,r,[.6,.6,.62],did,2.3);
@@ -1527,9 +1607,9 @@ function arterialsPost(){
  const rr=RB[2]+RB[3]/2+.04;for(let k=0;k*1.4<2*Math.PI*RB[2];k++){const an=k*1.4/RB[2]-Math.PI;lampAt(RB[0]+Math.cos(an)*rr,RB[1]+Math.sin(an)*rr);}}
 function generate(){
  arterialsPre();promenadePre();
- const XR={sunday:2,ranch:2.5,hospital:1.9,candy:1.5,vault:1.6,cake:1.4,orphanage:1.9,menagerie:4.7,playground:1.3,petite:1.3};
+ const XR={sunday:2,ranch:2.5,hospital:1.9,candy:1.5,vault:1.6,cake:1.4,orphanage:1.9,menagerie:4.7,playground:1.3,petite:1.3,kennels:2.9,unveiling:2.9};
  LM.forEach((l,i)=>{if(XR[l.id])EXC[i].r=XR[l.id];});
- for(let id=0;id<D.length;id++)placeDistrict(id);woods();harbour();harbourPlus();bridges();construction();LM.forEach(lmBuild);greenwayPlus();
+ for(let id=0;id<D.length;id++)placeDistrict(id);woods();harbour();harbourPlus();bridges();tinYard();construction();LM.forEach(lmBuild);greenwayPlus();
  arterialsPost();terrain();}
 // per-pixel street renderer: asphalt, sidewalks, centre lines, crosswalks, lit pools at night; arterials with lanes/medians
 const STREET_HEAD='uniform sampler2D tDist;uniform vec4 uG[19];uniform vec4 uK[19];uniform vec3 uSN[19];uniform vec4 uSeg[48];uniform vec4 uSWv[12];uniform float uNS;uniform vec4 uRb;\n'+
