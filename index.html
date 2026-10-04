@@ -235,13 +235,44 @@ const LM=[
  {id:'ranch',name:'The Breeding Ranch',d:'shambles',x:35,y:67,h:2.4,w:2.2,dp:1.6,ex:1.6,pin:3.2},
  {id:'airport',name:'Oak-Mount Airport',d:'oak',x:55.41,y:30.05,type:'airport',ex:.1,pin:3},
  {id:'orphanage',name:'Little Hearts Orphanage',d:'sow',x:69,y:63,h:2.2,w:1.8,dp:1.2,c:'#6a7096',pin:3.2},
- {id:'lion',name:"The Lion's Estate",d:'out',x:18,y:22,type:'estate',ex:3.2,pin:3.2},
+ {id:'lion',name:"The Lion's Estate",d:'out',x:18,y:22,type:'estate',ex:8.6,pin:3.2},
  {id:'syndicate',name:'Syndicate Government Block',d:'belle',x:35,y:33.5,type:'gov',ex:2.7,pin:3.2},
  {id:'hospital',name:"Children's Hospital",d:'junction',x:46.5,y:41.5,h:3.4,w:2,dp:1.5,c:'#dfe9f2',pin:3.2},
  {id:'dollhouse',name:'The Dollhouse',d:'junction',x:43.8,y:44.3,h:1.5,former:1,pin:4.4},
  {id:'kennels',name:'The Kennels',d:'tin',x:19.5,y:76,type:'kennels',ex:2,pin:3.2},
  {id:'unveiling',name:'The Unveiling',d:'tin',x:24.5,y:82,type:'open',ex:2.1,note:'event site',pin:3.2},
- {id:'mist',name:'The Mist Den',d:'slag',x:18,y:59.5,h:1.8,former:1,pin:3.2}];
+ {id:'mist',name:'The Mist Den',d:'slag',x:18,y:59.5,h:1.8,former:1,pin:3.2},
+ {id:'dragon',name:"The Dragon's Mansion",d:'out',x:35,y:11,type:'dragon',ex:6.6,pin:3.2}];
+// The Dragon's Mansion: a dark walled compound on the hills, facing south toward the city
+function dragonMansion(x,y,did){
+ const ST=[.11,.1,.11],SL=[.07,.06,.08],RED=[.55,.08,.06],GOLD=[1,.72,.25],WX=4.6,WY0=y-4.2,WY1=y+4.6;
+ // outer wall with red coping, corner towers lit red
+ const wall=(x0,y0,x1,y1)=>{const L=Math.hypot(x1-x0,y1-y0),r=-Math.atan2(y1-y0,x1-x0),mx=(x0+x1)/2,my=(y0+y1)/2;box(PROP,mx,my,L,.22,.55,r,ST,did);box(PROP,mx,my,L,.3,.06,r,RED,did,.55);
+  for(let k=.75;k<L;k+=1.5)LAMPS.push({x:x0+(x1-x0)*k/L,y:y0+(y1-y0)*k/L,h:.72,c:[1,.22,.12]});};
+ wall(x-WX,WY0,x+WX,WY0);wall(x-WX,WY0,x-WX,WY1);wall(x+WX,WY0,x+WX,WY1);wall(x-WX,WY1,x-.9,WY1);wall(x+.9,WY1,x+WX,WY1);
+ for(const [cx,cy] of [[x-WX,WY0],[x+WX,WY0],[x-WX,WY1],[x+WX,WY1]]){box(BODY,cx,cy,.62,.62,1,0,ST,did,0,{win:[.6,2,.3]});
+  box(ROOF,cx,cy,.76,.76,.45,0,SL,did,1);box(ROOF,cx,cy,.76,.76,.45,Math.PI/2,SL,did,1);LAMPS.push({x:cx,y:cy,h:1.55,c:[1,.3,.12]});}
+ // gatehouse, red gate, gold guardian statues on pedestals
+ box(BODY,x,WY1,2,.7,1.1,0,ST,did,0,{win:[.5,2,.32]});box(ROOF,x,WY1,.8,2.2,.55,Math.PI/2,SL,did,1.1);box(NEON,x,WY1+.36,.75,.03,.75,0,[.45,.06,.04],did,.02);
+ for(const s of [-1,1]){box(PROP,x+s*.62,WY1+.55,.28,.28,.5,0,ST,did);box(PROP,x+s*.62,WY1+.55,.22,.26,.3,0,[.6,.45,.18],did,.5);box(PROP,x+s*.62,WY1+.6,.12,.1,.14,0,[.6,.45,.18],did,.8);
+  LAMPS.push({x:x+s*.62,y:WY1+.55,h:1.05,c:[1,.32,.12]});}
+ // main hall with a steep slate roof and a glowing red ridge crest
+ box(BODY,x,y-1.6,4.4,2,1.7,0,ST,did,0,{win:[.75,2,.42]});box(ROOF,x,y-1.6,2.2,4.6,1.3,Math.PI/2,SL,did,1.7);box(NEON,x,y-1.6,4.4,.05,.05,0,[.7,.1,.06],did,3);
+ // central keep: tall tower, cross-gabled roof, gold finial
+ box(BODY,x,y-1.6,1.5,1.5,3.6,0,ST,did,0,{win:[.8,2,.4]});box(ROOF,x,y-1.6,1.7,1.7,1.4,0,SL,did,3.6);box(ROOF,x,y-1.6,1.7,1.7,1.4,Math.PI/2,SL,did,3.6);
+ box(CYL,x,y-1.6,.06,.06,.7,0,GOLD,did,4.95);LAMPS.push({x,y:y-1.6,h:5.7,c:[1,.75,.3]});
+ // two wings framing the courtyard
+ for(const s of [-1,1]){box(BODY,x+s*2.85,y+.6,1.3,2.8,1.35,0,ST,did,0,{win:[.75,2,.42]});box(ROOF,x+s*2.85,y+.6,1.4,2.95,.9,0,SL,did,1.35);box(NEON,x+s*2.85,y+.6,.05,2.95,.05,0,[.7,.1,.06],did,2.25);}
+ // courtyard: dark paving, black reflecting pool, fire braziers
+ box(PROP,x,y+1.2,1.7,2.4,.03,0,[.16,.15,.17],did);box(NEON,x,y+1.2,1,1.8,.02,0,[.04,.07,.12],did,.03);
+ for(const s of [-1,1])for(const f of [.2,2.2]){const bx=x+s*.95,by=y+f;box(CYL,bx,by,.14,.14,.4,0,[.2,.18,.18],did);LAMPS.push({x:bx,y:by,h:.5,c:[1,.45,.12]});}
+ // gardens: red maples and dark pines inside the walls
+ for(let q=0;q<16;q++){const px=x+R(-4,4),py=y+R(-3.9,-2.9)+(q%2?0:R(0,1.2)*(rand()<.5?0:1));if(Math.abs(px-x)<2.4&&py>y-2.7)continue;
+  TREES.push({x:px,y:py,w:R(.45,.7),dp:R(.45,.7),h:R(.6,.85),r:rand()*6,c:q%3?[.46,.08,.07]:[.08,.18,.11],did,y0:.05});}
+ for(const s of [-1,1])for(const f of [-3.4,3.6]){TREES.push({x:x+s*3.9,y:y+f,w:.6,dp:.6,h:.75,r:rand()*6,c:[.5,.09,.07],did,y0:.05});}
+ // red-lantern approach outside the gate
+ for(let k=.5;k<1.9;k+=.45)for(const s of [-1,1]){box(CYL,x+s*.5,WY1+k,.03,.03,.45,0,[.1,.08,.08],did);LAMPS.push({x:x+s*.5,y:WY1+k,h:.5,c:[1,.22,.1]});}
+ return 6;}
 const EXC=LM.map(l=>({x:l.x,y:l.y,r:l.ex||1.25}));
 EXC.push({s:[50.17,29.79,59.83,27.21],r:1.3},{s:[46.4,79.8,56.8,79.8],r:.5},{x:55.41,y:30.05,r:1.7});
 function excluded(x,y){for(const e of EXC){if(e.s){if(segDist(x,y,e.s[0],e.s[1],e.s[2],e.s[3])<e.r)return true;}else{const dx=x-e.x,dy=y-e.y;if(dx*dx+dy*dy<e.r*e.r)return true;}}return false;}
@@ -697,14 +728,48 @@ function lmBuild(l){const d=D[ID[l.d]],did=ID[l.d],x=l.x,y=l.y;let top=l.h||2;
   box(BODY,x+.6,y,.42,.42,.8,0,[.22,.14,.12],did,1.9,{win:[0,0,0]});box(ROOF,x+.6,y,.48,.48,.45,0,[.12,.08,.08],did,2.7);
   [[0,1.6,2.6,.04],[-1.3,1.05,.04,1.1],[1.3,1.05,.04,1.1]].forEach(e=>box(PROP,x+e[0],y+e[1],e[2],e[3],.25,0,[.25,.22,.22],did));
   LAMPS.push({x:x-.9,y:y+.8,h:.55,c:[1,.75,.4]});sign('♥ LITTLE HEARTS',x,y+.63,1.45,1.8,0,'#ff3b5c',{op:.55});top=3.2;break;}
- case 'lion':{const C=[.42,.38,.32];box(BODY,x,y,2.8,1.6,1.25,0,C,did,0,{win:[.85,0,.38]});box(ROOF,x,y,1.7,2.95,.8,Math.PI/2,[.15,.12,.12],did,1.25);
-  for(const s of [-1,1]){box(BODY,x+s*1.95,y+.2,1.1,1.3,.9,0,C,did,0,{win:[.8,0,.38]});box(ROOF,x+s*1.95,y+.2,1.2,1.4,.6,0,[.15,.12,.12],did,.9);}
-  box(CYL,x,y+2.1,.9,.9,.12,0,[.35,.35,.38],did);NCYL.push({x,y:y+2.1,w:.95,dp:.95,h:.03,r:0,c:[.3,.8,1],did,y0:.12});box(NEON,x,y+2.1,.06,.06,.55,0,[.6,.9,1],did,.12);
-  box(NEON,x+2.6,y+1.6,1.1,.6,.03,0,[.05,.45,.55],did);
-  for(let k=2.9;k<5.6;k+=.55)LAMPS.push({x:x-.45,y:y+k,h:.35,c:[1,.82,.5]},{x:x+.45,y:y+k,h:.35,c:[1,.82,.5]});
-  for(const s of [-1,1])box(CYL,x+s*.6,y+5.8,.25,.25,.7,0,[.4,.36,.3],did);box(NEON,x,y+5.8,1.2,.06,.06,0,[1,.78,.3],did,.7);
-  for(let q=0;q<22;q++){const a=q/22*6.283;if(Math.sin(a)>.55)continue;const rr=R(2.9,3.6);addT(x+Math.cos(a)*rr,y+Math.sin(a)*rr,R(.5,.8),'o',did);}
-  LAMPS.push({x:x-1.4,y:y+.9,h:.4,c:[1,.8,.5]},{x:x+1.4,y:y+.9,h:.4,c:[1,.8,.5]});top=2.1;break;}
+ case 'dragon':{top=dragonMansion(x,y,did);break;}
+ case 'lion':{const C=[.78,.72,.6],RF=[.22,.24,.28],GLD=[1,.78,.3],IRON=[.08,.08,.09],HEDGE=[.1,.28,.13],X1=x-6,X2=x+6,Y1=y-4.2,Y2=y+6.2,MY=y-1.2;
+  // wrought-iron fence: two rails, close-set bars, cream stone pillars with lamps every few metres
+  const fence=(ax,ay,bx,by)=>{const L=Math.hypot(bx-ax,by-ay),r=-Math.atan2(by-ay,bx-ax),mx=(ax+bx)/2,my=(ay+by)/2;
+   box(PROP,mx,my,L,.03,.03,r,IRON,did,.55);box(PROP,mx,my,L,.025,.025,r,IRON,did,.15);
+   for(let k=0;k<=L;k+=.22)box(CYL,ax+(bx-ax)*k/L,ay+(by-ay)*k/L,.02,.02,.62,0,IRON,did);
+   for(let k=0;k<=L+.01;k+=2.4){const t=Math.min(k,L)/L,px=ax+(bx-ax)*t,py=ay+(by-ay)*t;box(PROP,px,py,.22,.22,.75,0,C,did);box(PROP,px,py,.28,.28,.05,0,C,did,.75);LAMPS.push({x:px,y:py,h:.88,c:[1,.82,.5]});}};
+  fence(X1,Y1,X2,Y1);fence(X1,Y1,X1,Y2);fence(X2,Y1,X2,Y2);fence(X1,Y2,x-.85,Y2);fence(x+.85,Y2,X2,Y2);
+  // main gate: tall pillars with gold lions, open gilded gates, gold arch bar
+  for(const s of [-1,1]){const gx=x+s*.85;box(PROP,gx,Y2,.36,.36,1,0,C,did);box(PROP,gx,Y2,.42,.42,.06,0,C,did,1);
+   box(PROP,gx,Y2,.16,.3,.18,0,GLD,did,1.06);box(PROP,gx,Y2+.11,.1,.1,.13,0,GLD,did,1.2);LAMPS.push({x:gx,y:Y2,h:1.45,c:[1,.8,.45]});
+   box(PROP,x+s*.5,Y2-.28,.62,.03,.68,s*1.05,[.6,.45,.14],did);}
+  box(NEON,x,Y2,1.5,.05,.05,0,GLD,did,1.12);
+  // the mansion: two storeys, columned portico with pediment, grand steps
+  box(BODY,x,MY,4.4,2.2,1.9,0,C,did,0,{win:[.85,0,.45]});box(ROOF,x,MY,2.35,4.6,1,Math.PI/2,RF,did,1.9);
+  for(let k=0;k<6;k++)box(CYL,x-1+k*.4,MY+1.3,.14,.14,1.6,0,[.9,.88,.82],did,.15);
+  box(PROP,x,MY+1.3,2.4,.5,.15,0,[.85,.82,.75],did);box(PROP,x,MY+1.3,2.4,.55,.12,0,[.88,.85,.78],did,1.75);box(ROOF,x,MY+1.3,.6,2.4,.5,Math.PI/2,[.85,.82,.75],did,1.87);
+  for(let k=0;k<4;k++)box(PROP,x,MY+1.62+k*.15,1.8+k*.18,.15,.15-k*.035,0,[.85,.82,.75],did);
+  // wings stepping forward, square corner pavilions with cross-gabled roofs
+  for(const s of [-1,1]){box(BODY,x+s*3.1,MY+.6,1.8,2.6,1.5,0,C,did,0,{win:[.8,0,.45]});box(ROOF,x+s*3.1,MY+.6,1.9,2.75,.8,0,RF,did,1.5);
+   const px=x+s*3.1,py=MY+2.15;box(BODY,px,py,.95,.95,2,0,C,did,0,{win:[.8,0,.45]});box(ROOF,px,py,1.05,1.05,.7,0,RF,did,2);box(ROOF,px,py,1.05,1.05,.7,Math.PI/2,RF,did,2);
+   box(CYL,px,py,.05,.05,.35,0,GLD,did,2.7);}
+  // central fountain, gravel drive with lamps, formal hedge parterres on both sides
+  box(CYL,x,y+2.7,1.5,1.5,.14,0,[.82,.8,.76],did);NCYL.push({x,y:y+2.7,w:1.36,dp:1.36,h:.03,r:0,c:[.3,.8,1],did,y0:.13});
+  box(CYL,x,y+2.7,.3,.3,.4,0,[.82,.8,.76],did,.14);box(NEON,x,y+2.7,.07,.07,.5,0,[.6,.9,1],did,.54);LAMPS.push({x,y:y+2.7,h:.4,c:[.5,.85,1]});
+  box(PROP,x,(MY+2.3+Y2)/2,.75,Y2-MY-2.3,.02,0,[.72,.68,.6],did);
+  for(let k=MY+2.6;k<Y2-.3;k+=.6)for(const s of [-1,1]){box(CYL,x+s*.5,k,.025,.025,.4,0,IRON,did);LAMPS.push({x:x+s*.5,y:k,h:.44,c:[1,.82,.5]});}
+  for(const s of [-1,1]){const hx=x+s*2.1,hy=y+4.4,hw=2.2,hd=2.6;
+   for(const [ax,ay,bx,by] of [[-1,-1,1,-1],[-1,1,1,1],[-1,-1,-1,1],[1,-1,1,1],[0,-1,0,1],[-1,0,1,0]]){const L=Math.hypot((bx-ax)*hw/2,(by-ay)*hd/2);
+    box(PROP,hx+(ax+bx)*hw/4,hy+(ay+by)*hd/4,ax===bx?.14:L,ax===bx?L:.14,.18,0,HEDGE,did);}
+   addT(hx,hy,.35,'k',did);}
+  // pool with pool house (east), tennis court (west), gazebo in the back garden
+  box(PROP,x+4.3,y+3.3,2,1.3,.04,0,[.82,.78,.7],did);box(NEON,x+4.3,y+3.3,1.5,.8,.02,0,[.05,.45,.55],did,.04);
+  box(BODY,x+4.3,y+4.4,.9,.6,.55,0,C,did,0,{win:[.8,0,.4]});box(ROOF,x+4.3,y+4.4,1,.7,.3,0,RF,did,.55);
+  box(PROP,x-4.2,y+3.6,1.5,2.5,.02,0,[.2,.42,.3],did);box(PROP,x-4.2,y+3.6,1.3,.02,.03,0,[.95,.95,.95],did,.02);
+  for(const s of [-1,1])box(PROP,x-4.2+s*.65,y+3.6,.02,2.3,.03,0,[.95,.95,.95],did,.02);
+  box(PROP,x-3.8,y-3,1,1,.08,0,[.82,.8,.76],did);for(const [ox,oy] of [[-.4,-.4],[.4,-.4],[-.4,.4],[.4,.4]])box(CYL,x-3.8+ox,y-3+oy,.05,.05,.6,0,[.92,.9,.86],did,.08);
+  box(ROOF,x-3.8,y-3,1.05,1.05,.4,0,RF,did,.68);box(ROOF,x-3.8,y-3,1.05,1.05,.4,Math.PI/2,RF,did,.68);
+  // trees lining the inside of the fence and an avenue in the back garden
+  for(let k=.6;k<12;k+=1.1){addT(X1+k,Y1+.6,R(.55,.8),'o',did);if(k<4.4||k>7.6)addT(X1+.6,Y1+k*.85,R(.55,.8),'o',did),addT(X2-.6,Y1+k*.85,R(.55,.8),'o',did);}
+  for(const s of [-1,1])for(let k=0;k<4;k++)addT(x+s*(1.4+k*.9),MY-1.9,R(.45,.6),'k',did);
+  top=3.2;break;}
  case 'syndicate':{box(BODY,x,y,3.2,2.2,3.4,0,[.16,.22,.28],did,0,{win:[.6,1,.4]});box(PROP,x,y+1.35,3.6,.7,.3,0,[.3,.34,.38],did);
   for(let k=0;k<8;k++)box(CYL,x-1.4+k*.4,y+1.35,.14,.14,2.3,0,[.45,.55,.62],did,.3);
   box(ROOF,x,y+1.35,.7,3.4,.55,Math.PI/2,[.22,.28,.32],did,2.66);box(PROP,x,y+1.35,3.4,.7,.06,0,[.3,.34,.38],did,2.6);
@@ -1036,24 +1101,56 @@ function terrain(){
    for(let oy=-1;oy<=1;oy++)for(let ox=-1;ox<=1;ox++){const xx=gx+ox,yy=gy+oy;if(xx<0||yy<0||xx>=GW||yy>=GH)continue;s+=HF[yy*GW+xx];n++;}T2[i]=s/n;}
   HF=T2;}
  const hAt=(x,y)=>{const fx=clamp((x-X0)*2,0,GW-1.001),fy=clamp((y-Y0)*2,0,GH-1.001),ix=fx|0,iy=fy|0,tx=fx-ix,ty=fy-iy,i=iy*GW+ix;return(HF[i]*(1-tx)+HF[i+1]*tx)*(1-ty)+(HF[i+GW]*(1-tx)+HF[i+GW+1]*tx)*ty;};
- // ---- level a flat building pad under every house (smoothly blended into the hillside)
- const LION=LM.find(l=>l.id==='lion'),pads=[];
- BODY.forEach(b=>{if(b.did===OUT&&Math.hypot(b.x-LION.x,b.y-LION.y)>=4)pads.push([b.x,b.y,2.1,3.8]);});
- pads.push([LION.x,LION.y+.5,4.2,6.5],[LION.x,LION.y+4.8,1.8,3.5]);
- pads.forEach(pd=>{const [px,py,r1,r2]=pd,h0=hAt(px,py);
-  const gx0=Math.max(0,Math.floor((px-r2-X0)*2)),gx1=Math.min(GW-1,Math.ceil((px+r2-X0)*2)),gy0=Math.max(0,Math.floor((py-r2-Y0)*2)),gy1=Math.min(GH-1,Math.ceil((py+r2-Y0)*2));
-  for(let gy=gy0;gy<=gy1;gy++)for(let gx=gx0;gx<=gx1;gx++){const i=gy*GW+gx,d=Math.hypot(X0+gx*.5-px,Y0+gy*.5-py);if(d>=r2)continue;HF[i]+=(h0-HF[i])*(d<=r1?1:1-ss(r1,r2,d));}});
- // ---- winding driveways: an S-curve from each house (and the Lion's gate) to the nearest country road
- const [rs,ra,rsw]=D[OUT].st,rca=Math.cos(ra),rsa=Math.sin(ra),DRV=[],DG=new Set(),ck=(x,y)=>Math.round(x*2)+','+Math.round(y*2);
- const drive=(hx,hy,off)=>{const u=hx*rca+hy*rsa,v=-hx*rsa+hy*rca,cu=Math.round((u-rsw/2)/rs)*rs+rsw/2,cv=Math.round((v-rsw/2)/rs)*rs+rsw/2;
-  let tu=u,tv=v;if(Math.abs(cu-u)<Math.abs(cv-v))tu=cu;else tv=cv;
-  const ex=tu*rca-tv*rsa,ey=tu*rsa+tv*rca,L0=Math.hypot(ex-hx,ey-hy);if(L0<off+.4||!landX(ex,ey))return;
+ // ---- country roads: hand-routed winding roads from the city's edge out through the hills (replace the straight rural grid)
+ D[OUT].st=[1000,.15,-600]; // pushes the old rural street lines far off the map, so the ground shader draws none
+ const SPINES=[
+  [[9,61.4],[4.5,59],[-1,55.5],[-7,52],[-15,49.5],[-22,47.5],[-29.5,46]],
+  [[10,40.6],[7,36.5],[8,31.5],[12.5,29.8],[18,30],[24.5,29.6],[28,25],[31,21.6],[37,19.5],[42.5,16.5],[45,9],[47,1],[51,-8],[55,-21.5]],
+  [[52.6,21.6],[51,16.5],[47.5,12],[45,9]],
+  [[-1,55.5],[-4.5,48],[-3.5,40.5],[2,34],[7,31.8]],
+  [[8,31.5],[5,25],[3,17],[-1,9],[-6,4],[-14,-2],[-24,-12],[-29.5,-18]],
+  [[79,26.5],[80.5,20],[84,13],[88,6],[90,-2],[89,-12],[86,-21.5]],
+  [[11,69.5],[5.5,72.5],[0,77],[-7,81.5],[-16,85],[-29.5,87.5]]];
+ const ROADS=[],RG=new Set(),ck=(x,y)=>Math.round(x*2)+','+Math.round(y*2);
+ SPINES.forEach((sp,si)=>{const cv=new THREE.CatmullRomCurve3(sp.map(p=>new THREE.Vector3(p[0],0,p[1]))),n=Math.ceil(cv.getLength()/.25),raw=cv.getSpacedPoints(n),pts=[];
+  raw.forEach((v,k)=>{const a=raw[Math.max(0,k-1)],b=raw[Math.min(n,k+1)],dx=b.x-a.x,dz=b.z-a.z,L=Math.hypot(dx,dz)||1,s=k*.25,
+   w=(Math.sin(s*.55+si*2.1)*.35+Math.sin(s*1.7+si)*.12)*Math.min(1,k/8,(n-k)/8);pts.push([v.x-dz/L*w,v.z+dx/L*w]);});
+  ROADS.push(pts);pts.forEach(p=>{for(let oy=-2;oy<=2;oy++)for(let ox=-2;ox<=2;ox++)RG.add(ck(p[0]+ox*.5,p[1]+oy*.5));});});
+ // houses (and their gardens) standing in a road's path give way to the road
+ const LION=LM.find(l=>l.id==='lion'),DRAG=LM.find(l=>l.id==='dragon'),keepLM=b=>Math.hypot(b.x-LION.x,b.y-LION.y)<9.5||(DRAG&&Math.hypot(b.x-DRAG.x,b.y-DRAG.y)<8);
+ for(const L of [BODY,ROOF,NEON,CYL,PROP,TREES,LAMPS])for(let i=L.length-1;i>=0;i--){const b=L[i];if(keepLM(b)||!RG.has(ck(b.x,b.y)))continue;if(L===LAMPS?distAt(b.x,b.y)===OUT:b.did===OUT)L.splice(i,1);}
+ // ---- cut a gentle bench for the roads, then level a flat pad under every house and the two great estates
+ const flat=(px,py,r1,r2,h0)=>{const gx0=Math.max(0,Math.floor((px-r2-X0)*2)),gx1=Math.min(GW-1,Math.ceil((px+r2-X0)*2)),gy0=Math.max(0,Math.floor((py-r2-Y0)*2)),gy1=Math.min(GH-1,Math.ceil((py+r2-Y0)*2));
+  for(let gy=gy0;gy<=gy1;gy++)for(let gx=gx0;gx<=gx1;gx++){const i=gy*GW+gx,d=Math.hypot(X0+gx*.5-px,Y0+gy*.5-py);if(d>=r2)continue;HF[i]+=(h0-HF[i])*(d<=r1?1:1-ss(r1,r2,d));}};
+ ROADS.forEach(pts=>pts.forEach((p,k)=>{if(k%2===0)flat(p[0],p[1],.45,1.5,hAt(p[0],p[1]));}));
+ const pads=[];BODY.forEach(b=>{if(b.did===OUT&&!keepLM(b))pads.push([b.x,b.y,2.1,3.8]);});
+ const NP=pads.length;pads.push([LION.x,LION.y+1,9.8,12.5],[LION.x,LION.y+6.6,2,4]);if(DRAG)pads.push([DRAG.x,DRAG.y+.6,8.2,11],[DRAG.x,DRAG.y+6.3,2,4]);
+ pads.forEach(pd=>flat(pd[0],pd[1],pd[2],pd[3],hAt(pd[0],pd[1])));
+ // ---- country road ribbons draped on the finished terrain (worn asphalt, faded centre dashes, white edge lines; dark at night)
+ const rtx=(()=>{const c=document.createElement('canvas');c.width=64;c.height=256;const g=c.getContext('2d');g.fillStyle='#4a4a4e';g.fillRect(0,0,64,256);
+  for(let i=0;i<600;i++){const l=hash(i,3)>.5?255:0;g.fillStyle=`rgba(${l},${l},${l},.06)`;g.fillRect(hash(i,7)*64,hash(i,9)*256,2,2);}
+  g.fillStyle='#d8d4c8';g.fillRect(3,0,2,256);g.fillRect(59,0,2,256);g.fillStyle='#c9a032';g.fillRect(31,0,2,128);
+  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=renderer.capabilities.getMaxAnisotropy();return t;})();
+ const rp=[],ru=[],ri=[];
+ ROADS.forEach(pts=>{const b0=rp.length/3;
+  pts.forEach((q,k)=>{const a=pts[Math.max(0,k-1)],b=pts[Math.min(pts.length-1,k+1)],dx=b[0]-a[0],dy=b[1]-a[1],L=Math.hypot(dx,dy)||1,nx=-dy/L*.27,ny=dx/L*.27;
+   for(const s of [-1,1]){const x=q[0]+nx*s,y=q[1]+ny*s;rp.push(x-MW/2,hAt(x,y)+.04,y-MH/2);ru.push(s<0?0:1,k*.25/1.6);}});
+  for(let k=0;k<pts.length-1;k++){const a=b0+k*2;ri.push(a,a+2,a+1,a+1,a+2,a+3);}
+  const p0=pts[0];LAMPS.push({x:p0[0],y:p0[1],h:.6,c:[1,.75,.45]});});
+ const rgeo=new THREE.BufferGeometry();rgeo.setAttribute('position',new THREE.Float32BufferAttribute(rp,3));rgeo.setAttribute('uv',new THREE.Float32BufferAttribute(ru,2));rgeo.setIndex(ri);rgeo.computeVertexNormals();
+ const rmat=new THREE.MeshLambertMaterial({map:rtx,side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});
+ const rmesh=new THREE.Mesh(rgeo,rmat);rmesh.receiveShadow=true;scene.add(rmesh);VHOOKS.push(e=>rmat.color.setScalar(.3+.7*e));
+ // ---- winding driveways: an S-curve from each house (and the estate gates) to the nearest point on a country road
+ const RP=[];ROADS.forEach(pts=>pts.forEach(p=>RP.push(p)));
+ const DRV=[],DG=new Set(RG);
+ const drive=(hx,hy,off)=>{let ex=0,ey=0,bd=1e9;for(const p of RP){const d=(p[0]-hx)**2+(p[1]-hy)**2;if(d<bd){bd=d;ex=p[0];ey=p[1];}}
+  const L0=Math.sqrt(bd);if(L0<off+.4||L0>16)return;
   const sx=hx+(ex-hx)/L0*off,sy=hy+(ey-hy)/L0*off,L=Math.hypot(ex-sx,ey-sy),nx=-(ey-sy)/L,ny=(ex-sx)/L,w1=R(-.4,.4)*L,w2=R(-.4,.4)*L;
   const P=[[sx,sy],[sx+(ex-sx)*.33+nx*w1,sy+(ey-sy)*.33+ny*w1],[sx+(ex-sx)*.66+nx*w2,sy+(ey-sy)*.66+ny*w2],[ex,ey]],pts=[],n=Math.max(8,Math.ceil(L*4));
   for(let k=0;k<=n;k++){const t=k/n,q=1-t,x=q*q*q*P[0][0]+3*q*q*t*P[1][0]+3*q*t*t*P[2][0]+t*t*t*P[3][0],y=q*q*q*P[0][1]+3*q*q*t*P[1][1]+3*q*t*t*P[2][1]+t*t*t*P[3][1];
    pts.push([x,y]);for(let oy=-1;oy<=1;oy++)for(let ox=-1;ox<=1;ox++)DG.add(ck(x+ox*.5,y+oy*.5));}
   DRV.push(pts);};
- pads.forEach((pd,i)=>{if(i<pads.length-2)drive(pd[0],pd[1],1.1);});drive(LION.x,LION.y+5.8,0);
+ pads.forEach((pd,i)=>{if(i<NP)drive(pd[0],pd[1],1.1);});drive(LION.x,LION.y+5.8,0);if(DRAG)drive(DRAG.x,DRAG.y+6.5,0);
  // dense forest: noise-driven density, pines more likely higher up, clearings left for fields, roads and estates kept free
  const estates=BODY.filter(b=>b.did===OUT).map(b=>[b.x,b.y]),[s0,a0,sw0]=D[OUT].st,ca=Math.cos(a0),sa=Math.sin(a0),CONES=[];
  const onRoad=(x,y)=>{const u=x*ca+y*sa,v=-x*sa+y*ca,du=((u%s0)+s0)%s0,dv=((v%s0)+s0)%s0;return du<sw0+.22||dv<sw0+.22||du>s0-.22||dv>s0-.22;};
