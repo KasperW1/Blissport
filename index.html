@@ -82,7 +82,7 @@ html,body{margin:0;height:100%;background:#05040c;color:var(--txt);font-family:u
 #nav .tp.on{background:rgba(255,61,165,.32);color:#fff;box-shadow:0 0 12px rgba(255,61,165,.35)}
 #info{max-height:calc(100% - 330px)}
 @media (max-width:760px){#nav{display:none}#info{max-height:38%}}
-#hint{position:absolute;left:16px;bottom:20px;font-size:11.5px;color:var(--mut);pointer-events:none;max-width:38%}
+#hint{position:absolute;left:50%;bottom:68px;transform:translateX(-50%);width:max-content;max-width:min(760px,calc(100% - 200px));text-align:center;font-size:11px;line-height:1.4;color:var(--mut);pointer-events:none;text-shadow:0 1px 3px rgba(0,0,0,.8);transition:opacity .3s}
 #tip{position:fixed;left:0;top:0;pointer-events:none;opacity:0;transition:opacity .12s;background:rgba(6,5,16,.92);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:7px 10px;font-size:12.5px;z-index:9}
 #tip span{display:block;font-size:10px;letter-spacing:.14em;text-transform:uppercase;margin-top:2px}
 #labels{position:absolute;inset:0;pointer-events:none;overflow:hidden}
@@ -938,6 +938,92 @@ vRf=vec3(position.z*rs.z,position.y*rs.y,0.);`).replace('#include <project_verte
   s.vertexShader='attribute vec3 aSty;varying vec3 vSty;\n'+s.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nvSty=aSty;');
   s.fragmentShader='uniform float uDay;varying vec3 vSty;\n'+s.fragmentShader.replace('#include <lightmap_fragment>',FACADE+'\n#include <lightmap_fragment>');};
  m.needsUpdate=true;}
+// ---------------- OUTSKIRTS TERRAIN: rolling hills + dense mixed forest ----------------
+function terrain(){
+ // the terrain extends past the original map on the land sides (west & north) so hills can rise and fall gently
+ const X0=-30,Y0=-22,X1=MW,Y1=MH,GW=(X1-X0)*2+1,GH=(Y1-Y0)*2+1,N=GW*GH,INF=1e9,dc=new Float32Array(N),dw=new Float32Array(N);let HF=new Float32Array(N);
+ const inMap=(x,y)=>x>=0&&y>=0&&x<MW&&y<MH,landX=(x,y)=>inMap(x,y)?landAt(x,y):!(y<0&&x>97);
+ // distance (in half-units) to the nearest city cell and to the nearest water
+ for(let gy=0;gy<GH;gy++)for(let gx=0;gx<GW;gx++){const i=gy*GW+gx,x=Math.min(X0+gx*.5,MW-.01),y=Math.min(Y0+gy*.5,MH-.01),l=landX(x,y);dw[i]=l?INF:0;dc[i]=(inMap(x,y)&&l&&distAt(x,y)!==OUT)?0:INF;}
+ const dt=a=>{for(let gy=0;gy<GH;gy++)for(let gx=0;gx<GW;gx++){const i=gy*GW+gx;let v=a[i];if(gx>0)v=Math.min(v,a[i-1]+1);if(gy>0){v=Math.min(v,a[i-GW]+1);if(gx>0)v=Math.min(v,a[i-GW-1]+1.414);if(gx<GW-1)v=Math.min(v,a[i-GW+1]+1.414);}a[i]=v;}
+  for(let gy=GH-1;gy>=0;gy--)for(let gx=GW-1;gx>=0;gx--){const i=gy*GW+gx;let v=a[i];if(gx<GW-1)v=Math.min(v,a[i+1]+1);if(gy<GH-1){v=Math.min(v,a[i+GW]+1);if(gx<GW-1)v=Math.min(v,a[i+GW+1]+1.414);if(gx>0)v=Math.min(v,a[i+GW-1]+1.414);}a[i]=v;}};
+ dt(dc);dt(dw);
+ const ss=(a,b,x)=>{const t=clamp((x-a)/(b-a),0,1);return t*t*(3-2*t);};
+ // long, gentle ramps: rise over ~15 units from the city, slope to the shore over ~9 units, flatten at the outer edges
+ for(let gy=0;gy<GH;gy++)for(let gx=0;gx<GW;gx++){const i=gy*GW+gx,x=X0+gx*.5,y=Y0+gy*.5,dcu=dc[i]*.5,dwu=dw[i]*.5,edge=Math.min(x-X0,y-Y0,X1-x,Y1-y);
+  const n1=fbm(x*.045+11,y*.045+4),n2=vnoise(x*.12+5,y*.12+9),rg=1-Math.abs(2*vnoise(x*.07+21,y*.07+2)-1);
+  const A=(.6+5*n1*n1+n2+1.6*rg*rg)*(.55+.45*ss(0,25,dcu));
+  HF[i]=A*ss(1,16,dcu)*ss(.5,9,dwu)*ss(0,8,edge);}
+ for(let pass=0;pass<2;pass++){const T2=new Float32Array(N);
+  for(let gy=0;gy<GH;gy++)for(let gx=0;gx<GW;gx++){const i=gy*GW+gx;if(dc[i]===0||dw[i]===0)continue;let s=0,n=0;
+   for(let oy=-1;oy<=1;oy++)for(let ox=-1;ox<=1;ox++){const xx=gx+ox,yy=gy+oy;if(xx<0||yy<0||xx>=GW||yy>=GH)continue;s+=HF[yy*GW+xx];n++;}T2[i]=s/n;}
+  HF=T2;}
+ const hAt=(x,y)=>{const fx=clamp((x-X0)*2,0,GW-1.001),fy=clamp((y-Y0)*2,0,GH-1.001),ix=fx|0,iy=fy|0,tx=fx-ix,ty=fy-iy,i=iy*GW+ix;return(HF[i]*(1-tx)+HF[i+1]*tx)*(1-ty)+(HF[i+GW]*(1-tx)+HF[i+GW+1]*tx)*ty;};
+ // ---- level a flat building pad under every house (smoothly blended into the hillside)
+ const LION=LM.find(l=>l.id==='lion'),pads=[];
+ BODY.forEach(b=>{if(b.did===OUT&&Math.hypot(b.x-LION.x,b.y-LION.y)>=4)pads.push([b.x,b.y,2.1,3.8]);});
+ pads.push([LION.x,LION.y+.5,4.2,6.5],[LION.x,LION.y+4.8,1.8,3.5]);
+ pads.forEach(pd=>{const [px,py,r1,r2]=pd,h0=hAt(px,py);
+  const gx0=Math.max(0,Math.floor((px-r2-X0)*2)),gx1=Math.min(GW-1,Math.ceil((px+r2-X0)*2)),gy0=Math.max(0,Math.floor((py-r2-Y0)*2)),gy1=Math.min(GH-1,Math.ceil((py+r2-Y0)*2));
+  for(let gy=gy0;gy<=gy1;gy++)for(let gx=gx0;gx<=gx1;gx++){const i=gy*GW+gx,d=Math.hypot(X0+gx*.5-px,Y0+gy*.5-py);if(d>=r2)continue;HF[i]+=(h0-HF[i])*(d<=r1?1:1-ss(r1,r2,d));}});
+ // ---- winding driveways: an S-curve from each house (and the Lion's gate) to the nearest country road
+ const [rs,ra,rsw]=D[OUT].st,rca=Math.cos(ra),rsa=Math.sin(ra),DRV=[],DG=new Set(),ck=(x,y)=>Math.round(x*2)+','+Math.round(y*2);
+ const drive=(hx,hy,off)=>{const u=hx*rca+hy*rsa,v=-hx*rsa+hy*rca,cu=Math.round((u-rsw/2)/rs)*rs+rsw/2,cv=Math.round((v-rsw/2)/rs)*rs+rsw/2;
+  let tu=u,tv=v;if(Math.abs(cu-u)<Math.abs(cv-v))tu=cu;else tv=cv;
+  const ex=tu*rca-tv*rsa,ey=tu*rsa+tv*rca,L0=Math.hypot(ex-hx,ey-hy);if(L0<off+.4||!landX(ex,ey))return;
+  const sx=hx+(ex-hx)/L0*off,sy=hy+(ey-hy)/L0*off,L=Math.hypot(ex-sx,ey-sy),nx=-(ey-sy)/L,ny=(ex-sx)/L,w1=R(-.4,.4)*L,w2=R(-.4,.4)*L;
+  const P=[[sx,sy],[sx+(ex-sx)*.33+nx*w1,sy+(ey-sy)*.33+ny*w1],[sx+(ex-sx)*.66+nx*w2,sy+(ey-sy)*.66+ny*w2],[ex,ey]],pts=[],n=Math.max(8,Math.ceil(L*4));
+  for(let k=0;k<=n;k++){const t=k/n,q=1-t,x=q*q*q*P[0][0]+3*q*q*t*P[1][0]+3*q*t*t*P[2][0]+t*t*t*P[3][0],y=q*q*q*P[0][1]+3*q*q*t*P[1][1]+3*q*t*t*P[2][1]+t*t*t*P[3][1];
+   pts.push([x,y]);for(let oy=-1;oy<=1;oy++)for(let ox=-1;ox<=1;ox++)DG.add(ck(x+ox*.5,y+oy*.5));}
+  DRV.push(pts);};
+ pads.forEach((pd,i)=>{if(i<pads.length-2)drive(pd[0],pd[1],1.1);});drive(LION.x,LION.y+5.8,0);
+ // dense forest: noise-driven density, pines more likely higher up, clearings left for fields, roads and estates kept free
+ const estates=BODY.filter(b=>b.did===OUT).map(b=>[b.x,b.y]),[s0,a0,sw0]=D[OUT].st,ca=Math.cos(a0),sa=Math.sin(a0),CONES=[];
+ const onRoad=(x,y)=>{const u=x*ca+y*sa,v=-x*sa+y*ca,du=((u%s0)+s0)%s0,dv=((v%s0)+s0)%s0;return du<sw0+.22||dv<sw0+.22||du>s0-.22||dv>s0-.22;};
+ for(let q=0;q<42000;q++){const x=R(X0,X1),y=R(Y0,Y1);if(inMap(x,y)?(distAt(x,y)!==OUT||!landAt(x,y)):!landX(x,y))continue;
+  const f=fbm(x*.07+3,y*.07+17),dens=f>.4?1:f>.33?.25:.04;if(rand()>dens)continue;
+  if(onRoad(x,y)||roadDist(x,y)<.4||excluded(x,y)||DG.has(ck(x,y))||estates.some(e=>(e[0]-x)**2+(e[1]-y)**2<2.6))continue;
+  if(rand()<.35+Math.min(.5,hAt(x,y)/10)){const s=R(.28,.5);CONES.push({x,y,w:s*2,dp:s*2,h:s*R(3.2,4.6),r:rand()*6,c:n01(mix([18,54,32],[34,84,44],rand())),y0:.14});
+   box(CYL,x,y,.08,.08,.2,0,[.24,.17,.11],OUT);}
+  else{const s=R(.5,.9);TREES.push({x,y,w:s,dp:s,h:s*1.25,r:rand()*6,c:n01(mix([34,82,40],[72,112,48],rand())),did:OUT,y0:.15});}}
+ // lift everything standing in the outskirts onto the terrain (parts of one building share a footing height)
+ const foot=(x,y)=>Math.min(hAt(x,y),hAt(x+1.2,y),hAt(x-1.2,y),hAt(x,y+1.2),hAt(x,y-1.2));
+ for(const L of [BODY,PROP,ROOF,CYL,NEON,NCYL,SKEL])L.forEach(b=>{const h=foot(b.x,b.y);if(h>0)b.y0=(b.y0||0)+h-.03;});
+ for(const L of [TREES,CONES])L.forEach(b=>{const h=hAt(b.x,b.y);if(h>0)b.y0+=h-.05;});
+ for(const L of [LAMPS,BEAC])L.forEach(b=>{const h=hAt(b.x,b.y);if(h>0)b.h+=h;});
+ LM.forEach(l=>{const h=foot(l.x,l.y);if(h>0)l.top+=h;});D[OUT].lh=hAt(24,15)+4;
+ // clear garden trees off the driveways, then lay the driveway ribbons (draped on the terrain) with lamp posts
+ for(let i=TREES.length-1;i>=0;i--)if(TREES[i].did===OUT&&DG.has(ck(TREES[i].x,TREES[i].y)))TREES.splice(i,1);
+ const dpos=[],didx=[];
+ DRV.forEach(pts=>{const b0=dpos.length/3;
+  pts.forEach((q,k)=>{const a=pts[Math.max(0,k-1)],b=pts[Math.min(pts.length-1,k+1)],dx=b[0]-a[0],dy=b[1]-a[1],L=Math.hypot(dx,dy)||1,nx=-dy/L*.12,ny=dx/L*.12;
+   for(const s of [-1,1]){const x=q[0]+nx*s,y=q[1]+ny*s;dpos.push(x-MW/2,hAt(x,y)+.03,y-MH/2);}});
+  for(let k=0;k<pts.length-1;k++){const a=b0+k*2;didx.push(a,a+2,a+1,a+1,a+2,a+3);}
+  for(let k=2;k<pts.length-1;k+=5){const a=pts[k-1],b=pts[k+1],dx=b[0]-a[0],dy=b[1]-a[1],L=Math.hypot(dx,dy)||1,s=(k/5|0)%2?1:-1,x=pts[k][0]-dy/L*.2*s,y=pts[k][1]+dx/L*.2*s,h=hAt(x,y);
+   CYL.push({x,y,w:.03,dp:.03,h:.42,r:0,c:[.22,.22,.24],did:OUT,y0:h});LAMPS.push({x,y,h:h+.44,c:[1,.8,.5]});}});
+ const dgeo=new THREE.BufferGeometry();dgeo.setAttribute('position',new THREE.Float32BufferAttribute(dpos,3));dgeo.setIndex(didx);dgeo.computeVertexNormals();
+ const dmesh=new THREE.Mesh(dgeo,new THREE.MeshLambertMaterial({color:0x8a8272,side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2}));
+ dmesh.receiveShadow=true;scene.add(dmesh);
+ // the terrain mesh replaces the flat top of the map slab and uses the same ground material (streets, day/night)
+ // uv = original map coordinates (beyond 0..1 in the new land strips; the ground shader fills those with fields)
+ const g=new THREE.PlaneGeometry(X1-X0,Y1-Y0,GW-1,GH-1);g.rotateX(-Math.PI/2);const p=g.attributes.position,uv=g.attributes.uv;
+ for(let i=0;i<N;i++){p.setY(i,HF[i]);const gx=i%GW,gy=(i/GW)|0;uv.setXY(i,(X0+gx*.5)/MW,1-(Y0+gy*.5)/MH);}g.computeVertexNormals();
+ slab.geometry.dispose();slab.geometry=new THREE.BoxGeometry(X1-X0,2.4,Y1-Y0);slab.geometry.groups=slab.geometry.groups.filter(q=>q.materialIndex!==2);
+ slab.position.set((X0+X1)/2-MW/2,-1.2,(Y0+Y1)/2-MH/2);
+ const edgeL=scene.children.find(o=>o.isLineSegments&&o.geometry.type==='EdgesGeometry');
+ if(edgeL){edgeL.geometry.dispose();edgeL.geometry=new THREE.EdgesGeometry(slab.geometry);edgeL.position.copy(slab.position);}
+ const T=new THREE.Mesh(g,slab.material[2]);T.position.y=1.2;T.receiveShadow=true;T.castShadow=true;slab.add(T);
+ // the sea plane grows with the map (its land/water mask simply continues past the old edge)
+ let wDone=false;FRAMEHOOKS.push(()=>{if(wDone||!water)return;wDone=true;const wg=new THREE.PlaneGeometry(X1-X0,Y1-Y0,1,1),wu=wg.attributes.uv;
+  wu.setXY(0,X0/MW,1-Y0/MH);wu.setXY(1,X1/MW,1-Y0/MH);wu.setXY(2,X0/MW,1-Y1/MH);wu.setXY(3,X1/MW,1-Y1/MH);
+  water.geometry.dispose();water.geometry=wg;water.position.x=(X0+X1)/2-MW/2;water.position.z=(Y0+Y1)/2-MH/2;});
+ slab.raycast=(r,out)=>{const tmp=[];T.raycast(r,tmp);tmp.forEach(t=>{t.object=slab;out.push(t);});};
+ // pine trees
+ const cg=new THREE.ConeGeometry(.5,1,7);cg.translate(0,.5,0);
+ const cm=new THREE.InstancedMesh(cg,new THREE.MeshLambertMaterial({emissive:0x050f08}),Math.max(1,CONES.length)),o=new THREE.Object3D(),c=new THREE.Color();cm.count=CONES.length;
+ CONES.forEach((b,i)=>{o.position.set(b.x-MW/2,b.y0,b.y-MH/2);o.rotation.set(0,b.r,0);o.scale.set(b.w,b.h,b.dp);o.updateMatrix();cm.setMatrixAt(i,o.matrix);cm.setColorAt(i,c.setRGB(b.c[0],b.c[1],b.c[2]));});
+ if(!CONES.length)cm.setColorAt(0,c.set(0));
+ cm.instanceMatrix.needsUpdate=true;cm.castShadow=true;cm.receiveShadow=true;cm.frustumCulled=false;scene.add(cm);}
 function gantry(cx,cy,nx,ny,did){const r=-Math.atan2(ny,nx),C=[.75,.22,.1],ux=-ny,uy=nx;
  for(const a of [-.35,.35])for(const b of [-.3,.45])box(PROP,cx+ux*a+nx*b,cy+uy*a+ny*b,.08,.08,2.3,r,C,did);
  box(PROP,cx+nx*.075,cy+ny*.075,.85,.8,.1,r,C,did,2.25);box(PROP,cx+nx*.6,cy+ny*.6,3.4,.16,.14,r,C,did,2.45);box(PROP,cx-nx*.55,cy-ny*.55,.55,.5,.38,r,[.6,.6,.62],did,2.3);
@@ -1001,7 +1087,7 @@ function generate(){
  const XR={sunday:2,ranch:2.5,hospital:1.9,candy:1.5,vault:1.6,cake:1.4,orphanage:1.9,menagerie:4.7,playground:1.3,petite:1.3};
  LM.forEach((l,i)=>{if(XR[l.id])EXC[i].r=XR[l.id];});
  for(let id=0;id<D.length;id++)placeDistrict(id);woods();harbour();harbourPlus();bridges();construction();LM.forEach(lmBuild);greenwayPlus();
- arterialsPost();}
+ arterialsPost();terrain();}
 // per-pixel street renderer: asphalt, sidewalks, centre lines, crosswalks, lit pools at night; arterials with lanes/medians
 const STREET_HEAD='uniform sampler2D tDist;uniform vec4 uG[19];uniform vec4 uK[19];uniform vec3 uSN[19];uniform vec4 uSeg[48];uniform vec4 uSWv[12];uniform float uNS;uniform vec4 uRb;\n'+
  'float ln(float d,float w,float px){float W=max(w,px*.7);return (1.-smoothstep(W-px*.5,W+px*.5,d))*min(1.,w/W*1.6);}\n';
