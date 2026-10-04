@@ -249,7 +249,7 @@ function dragonMansion(x,y,did){
  // outer wall with red coping, corner towers lit red
  const wall=(x0,y0,x1,y1)=>{const L=Math.hypot(x1-x0,y1-y0),r=-Math.atan2(y1-y0,x1-x0),mx=(x0+x1)/2,my=(y0+y1)/2;box(PROP,mx,my,L,.22,.55,r,ST,did);box(PROP,mx,my,L,.3,.06,r,RED,did,.55);
   for(let k=.75;k<L;k+=1.5)LAMPS.push({x:x0+(x1-x0)*k/L,y:y0+(y1-y0)*k/L,h:.72,c:[1,.22,.12]});};
- wall(x-WX,WY0,x+WX,WY0);wall(x-WX,WY0,x-WX,WY1);wall(x+WX,WY0,x+WX,WY1);wall(x-WX,WY1,x-.9,WY1);wall(x+.9,WY1,x+WX,WY1);
+ wall(x-WX,WY0,x-.6,WY0);wall(x+.6,WY0,x+WX,WY0);wall(x-WX,WY0,x-WX,WY1);wall(x+WX,WY0,x+WX,WY1);wall(x-WX,WY1,x-.9,WY1);wall(x+.9,WY1,x+WX,WY1);
  for(const [cx,cy] of [[x-WX,WY0],[x+WX,WY0],[x-WX,WY1],[x+WX,WY1]]){box(BODY,cx,cy,.62,.62,1,0,ST,did,0,{win:[.6,2,.3]});
   box(ROOF,cx,cy,.76,.76,.45,0,SL,did,1);box(ROOF,cx,cy,.76,.76,.45,Math.PI/2,SL,did,1);LAMPS.push({x:cx,y:cy,h:1.55,c:[1,.3,.12]});}
  // gatehouse, red gate, gold guardian statues on pedestals
@@ -272,6 +272,29 @@ function dragonMansion(x,y,did){
  for(const s of [-1,1])for(const f of [-3.4,3.6]){TREES.push({x:x+s*3.9,y:y+f,w:.6,dp:.6,h:.75,r:rand()*6,c:[.5,.09,.07],did,y0:.05});}
  // red-lantern approach outside the gate
  for(let k=.5;k<1.9;k+=.45)for(const s of [-1,1]){box(CYL,x+s*.5,WY1+k,.03,.03,.45,0,[.1,.08,.08],did);LAMPS.push({x:x+s*.5,y:WY1+k,h:.5,c:[1,.22,.1]});}
+ // back gate → winding flagstone path lit by stone lanterns → a secluded grove with a small shrine
+ const G=[x+1.4,WY0-6.8],P=[[x,WY0-.3],[x-1.4,WY0-2],[x+2.6,WY0-3.6],[G[0],G[1]+2.1]],LMd=LM.find(l=>l.id==='dragon'),path=[];LMd.pads=[];
+ for(let k=0;k<=24;k++){const t=k/24,q=1-t;path.push([q*q*q*P[0][0]+3*q*q*t*P[1][0]+3*q*t*t*P[2][0]+t*t*t*P[3][0],q*q*q*P[0][1]+3*q*q*t*P[1][1]+3*q*t*t*P[2][1]+t*t*t*P[3][1]]);}
+ // outlying houses and gardens in the way give way to the path and grove
+ const inWay=(px,py)=>Math.hypot(px-G[0],py-G[1])<3.6||path.some(p=>Math.hypot(px-p[0],py-p[1])<.9);
+ for(const L of [BODY,ROOF,NEON,CYL,PROP,TREES,LAMPS])for(let i=L.length-1;i>=0;i--){const b=L[i];if((L===LAMPS||b.did===did)&&inWay(b.x,b.y))L.splice(i,1);}
+ for(const s of [-1,1]){box(PROP,x+s*.6,WY0,.26,.26,.7,0,ST,did);LAMPS.push({x:x+s*.6,y:WY0,h:.8,c:[1,.3,.12]});}
+ box(NEON,x,WY0,.9,.03,.55,0,[.4,.06,.04],did,.02);
+ path.forEach((p,k)=>{box(PROP,p[0]+R(-.05,.05),p[1]+R(-.05,.05),R(.2,.26),R(.18,.24),.03,R(0,3),[.42,.4,.38],did);
+  if(k%2===0)LMd.pads.push([p[0],p[1],.55,1.5]);EXC.push({x:p[0],y:p[1],r:.6});
+  if(k%4===2){const lx=p[0]+((k/4|0)%2?.32:-.32),ly=p[1];box(PROP,lx,ly,.12,.12,.18,0,[.5,.48,.45],did);box(PROP,lx,ly,.16,.16,.04,0,[.5,.48,.45],did,.18);LAMPS.push({x:lx,y:ly,h:.24,c:[1,.5,.2]});}});
+ LMd.pads.push([G[0],G[1],2.9,4.8]);EXC.push({x:G[0],y:G[1],r:3.3});
+ // the grove: a ring of tall dark cypresses and red maples, open toward the path
+ for(let q=0;q<26;q++){const a=q/26*6.283+R(-.06,.06),rr=R(2.3,3),tx=G[0]+Math.cos(a)*rr,ty=G[1]+Math.sin(a)*rr,tall=q%3!==0;if(Math.abs(a-Math.PI/2)<.32)continue;
+  TREES.push({x:tx,y:ty,w:tall?R(.5,.65):R(.6,.8),dp:tall?R(.5,.65):R(.6,.8),h:tall?R(1.4,1.9):R(.7,.9),r:rand()*6,c:tall?[.07,.17,.1]:[.5,.09,.07],did,y0:.05});
+  if(tall)box(CYL,tx,ty,.06,.06,.5,0,[.2,.14,.1],did);}
+ for(let q=0;q<3;q++){const a=R(0,6.28),rr=R(1.8,2.1);TREES.push({x:G[0]+Math.cos(a)*rr,y:G[1]+Math.sin(a)*rr,w:.5,dp:.5,h:.6,r:rand()*6,c:[.55,.1,.07],did,y0:.05});}
+ // the shrine: stone platform, red lacquered columns, dark cross-gabled roof, stone altar with a warm light, ring of stone lanterns
+ box(PROP,G[0],G[1],1.3,1.3,.12,0,[.45,.43,.4],did);
+ for(const [ox,oy] of [[-.45,-.45],[.45,-.45],[-.45,.45],[.45,.45]])box(CYL,G[0]+ox,G[1]+oy,.07,.07,.75,0,[.55,.09,.06],did,.12);
+ box(ROOF,G[0],G[1],1.15,1.15,.42,0,SL,did,.87);box(ROOF,G[0],G[1],1.15,1.15,.42,Math.PI/2,SL,did,.87);
+ box(PROP,G[0],G[1],.4,.3,.3,0,[.32,.3,.29],did,.12);LAMPS.push({x:G[0],y:G[1],h:.55,c:[1,.55,.22]});
+ for(let q=0;q<6;q++){const a=q/6*6.283+.5,lx=G[0]+Math.cos(a)*1.55,ly=G[1]+Math.sin(a)*1.55;box(PROP,lx,ly,.12,.12,.2,0,[.5,.48,.45],did);box(PROP,lx,ly,.16,.16,.04,0,[.5,.48,.45],did,.2);LAMPS.push({x:lx,y:ly,h:.26,c:[1,.45,.18]});}
  return 6;}
 const EXC=LM.map(l=>({x:l.x,y:l.y,r:l.ex||1.25}));
 EXC.push({s:[50.17,29.79,59.83,27.21],r:1.3},{s:[46.4,79.8,56.8,79.8],r:.5},{x:55.41,y:30.05,r:1.7});
@@ -1125,6 +1148,7 @@ function terrain(){
  ROADS.forEach(pts=>pts.forEach((p,k)=>{if(k%2===0)flat(p[0],p[1],.45,1.5,hAt(p[0],p[1]));}));
  const pads=[];BODY.forEach(b=>{if(b.did===OUT&&!keepLM(b))pads.push([b.x,b.y,2.1,3.8]);});
  const NP=pads.length;pads.push([LION.x,LION.y+1,9.8,12.5],[LION.x,LION.y+6.6,2,4]);if(DRAG)pads.push([DRAG.x,DRAG.y+.6,8.2,11],[DRAG.x,DRAG.y+6.3,2,4]);
+ if(DRAG&&DRAG.pads)DRAG.pads.forEach(p=>pads.push(p)); // the Dragon's grove path and clearing
  pads.forEach(pd=>flat(pd[0],pd[1],pd[2],pd[3],hAt(pd[0],pd[1])));
  // ---- country road ribbons draped on the finished terrain (worn asphalt, faded centre dashes, white edge lines; dark at night)
  const rtx=(()=>{const c=document.createElement('canvas');c.width=64;c.height=256;const g=c.getContext('2d');g.fillStyle='#4a4a4e';g.fillRect(0,0,64,256);
@@ -1155,7 +1179,7 @@ function terrain(){
  const estates=BODY.filter(b=>b.did===OUT).map(b=>[b.x,b.y]),[s0,a0,sw0]=D[OUT].st,ca=Math.cos(a0),sa=Math.sin(a0),CONES=[];
  const onRoad=(x,y)=>{const u=x*ca+y*sa,v=-x*sa+y*ca,du=((u%s0)+s0)%s0,dv=((v%s0)+s0)%s0;return du<sw0+.22||dv<sw0+.22||du>s0-.22||dv>s0-.22;};
  for(let q=0;q<42000;q++){const x=R(X0,X1),y=R(Y0,Y1);if(inMap(x,y)?(distAt(x,y)!==OUT||!landAt(x,y)):!landX(x,y))continue;
-  const f=fbm(x*.07+3,y*.07+17),dens=f>.4?1:f>.33?.25:.04;if(rand()>dens)continue;
+  const f=fbm(x*.07+3,y*.07+17),dens=segDist(x,y,18,22,35,11)<10?1:f>.36?1:f>.3?.45:.1;if(rand()>dens)continue;
   if(onRoad(x,y)||roadDist(x,y)<.4||excluded(x,y)||DG.has(ck(x,y))||estates.some(e=>(e[0]-x)**2+(e[1]-y)**2<2.6))continue;
   if(rand()<.35+Math.min(.5,hAt(x,y)/10)){const s=R(.28,.5);CONES.push({x,y,w:s*2,dp:s*2,h:s*R(3.2,4.6),r:rand()*6,c:n01(mix([18,54,32],[34,84,44],rand())),y0:.14});
    box(CYL,x,y,.08,.08,.2,0,[.24,.17,.11],OUT);}
