@@ -345,7 +345,8 @@ function initDN(){DN.ready=true;
  // per-instance daytime colours (lighter, weathered versions of the night palette)
  const P=new Map([[BODY,[2.2,.55]],[PROP,[2.2,.45]],[ROOF,[2.6,.35]],[CYL,[2,.4]],[TREES,[2.3,0]]]),grey=[.74,.73,.72];
  DN.lists=[...P.keys()];
- P.forEach((k,L)=>L.forEach(b=>{b.cn=b.c.slice();const s=b.cn.map(v=>Math.min(1,v*k[0]));b.cd=mix(s,grey,k[1]);b.c=b.cn.slice();}));
+ paintCity();
+ P.forEach((k,L)=>L.forEach(b=>{b.cn=(b.pn||b.c).slice();const s=b.cn.map(v=>Math.min(1,v*k[0]));b.cd=b.pal?b.pal.slice():mix(s,grey,k[1]);b.c=b.cn.slice();}));
  $('toolbar').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.dataset.act!=='day')return;
   DN.target=DN.target?0:1;b.textContent=DN.target?'☾ Night':'☀ Day';});}
 function applyDay(d){const e=d*d*(3-2*d),L=(a,b)=>a+(b-a)*e;
@@ -689,8 +690,19 @@ function velvets(x,y,did){
  const DM=[],dm=(m,n,d,en,ed)=>{DM.push([m,new THREE.Color(n),new THREE.Color(d),en,ed]);return m;};
  const flat=m=>{m.rotation.x=-Math.PI/2;return m;},ring=(m)=>{m.rotation.x=Math.PI/2;return m;};
  // --- base hall: three lit storeys under a purple glass dome
- const bt=facadeTex(3,48,7,.85,'#ffcf8a');bt.repeat.set(3,1);
- const baseM=dm(new THREE.MeshLambertMaterial({color:0x221a30,emissive:0xffffff,emissiveMap:bt}),0x221a30,0xd9d2e2,1,.08);
+ // daytime facade texture: white slabs, balcony railings, glass with mullions, curtains, vertical fins (aligned with the night window map)
+ const fdTex=(rows,cols)=>{const c=document.createElement('canvas');c.width=512;c.height=1024;const g=c.getContext('2d'),rh=1024/rows,cw=512/cols;
+  g.fillStyle='#f3f1f5';g.fillRect(0,0,512,1024);
+  for(let r=0;r<rows;r++){const y=1024-(r+1)*rh,gr=g.createLinearGradient(0,y+rh*.2,0,y+rh*.76);gr.addColorStop(0,'#94aabf');gr.addColorStop(1,'#d0dce6');
+   for(let k=0;k<cols;k++){g.fillStyle=gr;g.fillRect(k*cw+cw*.14,y+rh*.2,cw*.72,rh*.56);g.fillStyle='rgba(255,255,255,.6)';g.fillRect(k*cw+cw*.485,y+rh*.2,Math.max(1,cw*.03),rh*.56);
+    if(hash(r*7+k,k*3+r)<.18){g.fillStyle='rgba(236,229,216,.92)';g.fillRect(k*cw+cw*.14,y+rh*.2,cw*.72,rh*.56*(.35+.5*hash(k,r)));}}
+   g.fillStyle='#d8d4de';g.fillRect(0,y+rh*.8,512,rh*.2);g.fillStyle='#b5b0bf';g.fillRect(0,y+rh*.8,512,Math.max(1,rh*.05));
+   g.fillStyle='#ffffff';g.fillRect(0,y+rh*.85,512,Math.max(1,rh*.035));}
+  for(let k=0;k<cols;k+=4){g.fillStyle='rgba(228,225,234,.95)';g.fillRect(k*cw-1.5,0,3,1024);}
+  const t=new THREE.CanvasTexture(c);t.wrapS=THREE.RepeatWrapping;t.anisotropy=renderer.capabilities.getMaxAnisotropy();return t;};
+ const TD=fdTex(36,26);TD.repeat.set(3,1);
+ const bt=facadeTex(3,48,7,.85,'#ffcf8a');bt.repeat.set(3,1);const bd=fdTex(3,48);bd.repeat.set(3,1);
+ const baseM=dm(new THREE.MeshLambertMaterial({color:0x221a30,map:bd,emissive:0xffffff,emissiveMap:bt}),0x221a30,0xffffff,1,.08);
  add(new THREE.CylinderGeometry(BR,BR+.05,BH,72,1,true),baseM,x,BH/2,y);
  ring(add(new THREE.TorusGeometry(BR+.03,.03,6,96),dm(new THREE.MeshBasicMaterial({color:0xc04dff}),0xc04dff,0x9a3ccc),x,BH,y));
  ring(add(new THREE.TorusGeometry(BR+.06,.02,6,96),new THREE.MeshBasicMaterial({color:0xffb070}),x,.05,y));
@@ -706,7 +718,7 @@ function velvets(x,y,did){
  // --- three sail towers, 120° apart, with neon edge strips and tiered crowns
  for(let k=0;k<3;k++){const phi=-Math.PI/2+k*2*Math.PI/3,nx=Math.cos(phi),ny=Math.sin(phi),cx=x+nx*Rt,cy=y+ny*Rt,col=COLS[k];
   const ft=facadeTex(36,26,11+k*5,.62,'#ffc27a');ft.repeat.set(3,1);
-  add(sailGeo(cx,cy,phi,H,a0,b0),dm(new THREE.MeshLambertMaterial({color:0x1d1828,emissive:0xffffff,emissiveMap:ft,side:THREE.DoubleSide}),0x1d1828,0xe4dfea,1,.06));
+  add(sailGeo(cx,cy,phi,H,a0,b0),dm(new THREE.MeshLambertMaterial({color:0x1d1828,map:TD,emissive:0xffffff,emissiveMap:ft,side:THREE.DoubleSide}),0x1d1828,0xffffff,1,.06));
   const sm=dm(new THREE.MeshBasicMaterial({color:col}),col,new THREE.Color(col).multiplyScalar(.75).getHex());
   // neon strips along both leading edges of the sail
   for(const sg of [-1,1]){const pts=[];for(let j=0;j<=28;j++)pts.push(sailPt(cx,cy,phi,H,a0,b0,j/28,sg*.42,1.03));
@@ -833,6 +845,99 @@ function greenwayPlus(){
   m.rotation.x=-Math.PI/2;m.position.set(x-MW/2,R(.25,1.1),y-MH/2);grp.add(m);MIST.push({m,x:m.position.x,z:m.position.z,o:R(.1,.18),p:rand()*6.28,sp:R(.05,.12)});}
  FRAMEHOOKS.push(t=>{const dy=DN.day||0,nt=1-.5*dy;fm.opacity=(1-dy)*(.8+.2*Math.sin(t*2.7));
   MIST.forEach(k=>{k.m.position.x=k.x+Math.sin(t*k.sp+k.p)*.7;k.m.position.z=k.z+Math.cos(t*k.sp*.8+k.p)*.5;k.m.material.opacity=k.o*nt*(.75+.25*Math.sin(t*.3+k.p));});});}
+// ---------------- BUILDING MATERIALS: per-district palettes + facade shader ----------------
+// s: material styles with weights (0 concrete panels, 1 brick, 2 glass curtain wall, 3 painted stucco, 4 corrugated metal, 5 cut stone)
+// c: facade colours, r: roof colours, g: grime/weathering, shop: chance of a ground-floor shopfront with an awning
+const PAL={
+ coffer:{s:[[3,.5],[2,.25],[1,.25]],c:['#c94f7c','#7a3a6b','#3a3346','#e8d3dc','#a8326a','#f2b5c8','#5c2a4a'],r:['#3a3340','#2f2a35','#4a3a48'],g:.08,shop:.9},
+ bottom:{s:[[1,.5],[3,.5]],c:['#9b3b3b','#6e2a35','#c76b6b','#4a3036','#e0b3a8','#8a4a5a'],r:['#3a3030','#4a3a3a'],g:.18,shop:.9},
+ greenway:{s:[[1,.5],[5,.3],[3,.2]],c:['#8a5a44','#a87458','#d8c8a8','#6b4a3a','#b8a888'],r:['#3f5a3a','#4a3a32','#5a7a5a'],g:.12,shop:.5},
+ piers:{s:[[3,.6],[2,.4]],c:['#f4efe6','#e8d8c4','#c9e4ea','#f0c8d0','#d4e6f0','#fbf6ee'],r:['#c86a4a','#e0ddd6'],g:.03,shop:.9},
+ shambles:{s:[[1,.4],[3,.4],[0,.2]],c:['#7a4a8a','#5a3a5a','#a85a5a','#4a3c50','#c48a6a','#6a5a7a'],r:['#33303a','#4a3a3a'],g:.25,shop:.8},
+ oak:{s:[[5,.5],[3,.5]],c:['#efe8dc','#f6f2ea','#d9cdb8','#c9b89a','#e8e0d0'],r:['#3a3f4a','#4a3a35','#5a6a6a'],g:0,shop:0},
+ narrows:{s:[[1,.6],[0,.4]],c:['#a0523d','#8a4a3a','#b8826a','#6a5a4e','#c4a080','#7a6a5a'],r:['#3a3535','#4a4040'],g:.35,shop:.7},
+ lr:{s:[[3,1]],c:['#f2c14e','#3fb08a','#ef6f4f','#4aa3d8','#f5e6c8','#e85a8a'],r:['#c4623e','#8a5a3a'],g:.1,shop:.8},
+ lv:{s:[[3,.7],[5,.3]],c:['#d98b4a','#e8b86a','#c45a3a','#efd9b0','#b8603e','#e7c9a0'],r:['#b5523a','#a04a32'],g:.12,shop:.7},
+ lp:{s:[[3,1]],c:['#f7f4ec','#f0d9a8','#9cd3e0','#f4c2a8','#fbfaf5','#d8e8c8'],r:['#c4623e','#d47a50'],g:.05,shop:.6},
+ sow:{s:[[0,.6],[1,.4]],c:['#7a7570','#6a5e55','#8a7f72','#5a5550','#9a8a7a'],r:['#3a3836','#4a4642'],g:.55,shop:.3},
+ out:{s:[[3,.6],[5,.4]],c:['#f2ede2','#e6dcc6','#c8d4dc','#e8e0c8','#d0b8a0','#fbf8f2'],r:['#4a4a52','#6a4a3a','#3a4a5a'],g:0,shop:0},
+ fingers:{s:[[4,1]],c:['#8a8f96','#6f7a84','#9a6a4a','#5a6a7a','#b0b4b8','#3f6a8a'],r:['#5a6068','#7a5040'],g:.2,shop:0},
+ canals:{s:[[1,.6],[4,.4]],c:['#9a4a35','#7a3e30','#a8644a','#6a6a6a','#8a7060'],r:['#3a3533','#5a4a40'],g:.3,shop:.3},
+ belle:{s:[[5,.6],[2,.4]],c:['#e6dfcf','#d8cfbc','#7fa7c4','#cfc4ae','#9fbad0'],r:['#5a6a70','#4a5560'],g:.05,shop:.3},
+ sky:{s:[[2,.85],[5,.15]],c:['#3d6f96','#2f5a7a','#5a8fb0','#7aa8c0','#294a66','#9cc0d4','#3a6a6a'],r:['#3a4048','#2f353c'],g:0,shop:.2},
+ junction:{s:[[1,.4],[3,.3],[5,.3]],c:['#b56a4f','#d8c4a8','#8aa0b0','#c8a888','#e8e0d4','#a87a6a'],r:['#3a3a40','#5a4a40'],g:.12,shop:.6},
+ tin:{s:[[4,.6],[1,.4]],c:['#7a4a32','#5a4a40','#8a6a52','#4a4440','#9a5a3a'],r:['#4a3a32','#3a3430'],g:.6,shop:0},
+ slag:{s:[[0,.7],[1,.3]],c:['#6a6660','#5a5650','#7a7068','#4a4644','#8a7a6a'],r:['#33302e','#403c38'],g:.6,shop:.3}};
+const FACADE=`{float sty=vSty.x,grime=vSty.y,shop=vSty.z;
+float fd=1.-smoothstep(45.,140.,vWD),fd2=1.-smoothstep(12.,40.,vWD);
+vec3 base=diffuseColor.rgb;
+if(vWin.z<.5){
+ float fh=max(vWinP.z,.2);vec2 g=vec2(vWin.x/(fh*.82),vWin.y/fh),c=floor(g),f=fract(g);
+ float m=step(.2,f.x)*step(f.x,.8)*step(.24,f.y)*step(f.y,.74)*step(.01,vWinP.z);
+ float r=fract(sin(dot(c+vSeed.xz*.37,vec2(12.99,78.23)))*43758.5);
+ float pat=1.;
+ if(sty>.5&&sty<1.5){vec2 b=vec2(vWin.x*16.,vWin.y*32.);b.x+=step(1.,mod(floor(b.y),2.))*.5;vec2 bf=fract(b);
+  pat=mix(1.,mix(.86+.24*fract(sin(dot(floor(b),vec2(4.1,7.7)))*999.),1.22,max(step(bf.x,.08),step(bf.y,.14))),fd2);}
+ else if(sty>3.5&&sty<4.5)pat=1.+.12*sin(vWin.x*80.)*fd2;
+ else if(sty>4.5&&sty<5.5){vec2 b=vec2(vWin.x*5.,vWin.y*9.);b.x+=step(1.,mod(floor(b.y),2.))*.5;vec2 bf=fract(b);
+  pat=mix(1.,mix(.95+.08*fract(sin(dot(floor(b),vec2(3.1,9.7)))*99.),1.12,max(step(bf.x,.04),step(bf.y,.06))),fd);}
+ else if(sty>2.5&&sty<3.5)pat=1.+(.08*fract(sin(dot(floor(vWin.xy*7.),vec2(7.,3.)))*99.)-.04)*fd;
+ else pat=1.+(.07*fract(sin(dot(floor(vWin.xy*vec2(2.,5.)),vec2(5.,11.)))*99.)-.035)*fd;
+ base*=pat;
+ float isGlass=step(1.5,sty)*step(sty,2.5);
+ base=mix(base,base*1.2+.03,step(f.y,.07)*(1.-isGlass)*.8*fd);
+ float streak=step(.55,fract(sin(c.x*37.1+vSeed.x)*91.))*(1.-f.y);
+ base*=1.-grime*(.35*(1.-smoothstep(0.,1.5,vWin.y))+.22*streak*(1.-m)*fd);
+ float dl=mix(.12,1.,uDay);
+ if(isGlass>.5){float mul=max(step(f.x,.05),step(f.y,.07));
+  vec3 sky=mix(vec3(.5,.64,.8),vec3(.82,.88,.95),clamp(vWin.y*.06,0.,1.))*dl;
+  vec3 gl=mix(base*.75,sky,(.4+.25*r)*uDay+.1);
+  base=mix(gl,vec3(.62,.65,.7)*dl,mul*fd*.85);}
+ else{
+  vec3 sky=mix(vec3(.3,.38,.48),vec3(.58,.68,.8),r),cur=r>.82?vec3(.88,.83,.72):sky;
+  float inner=step(.25,f.x)*step(f.x,.75)*step(.29,f.y)*step(f.y,.69);
+  base=mix(base,cur,m*fd*uDay*.85);base=mix(base,base*1.3+.06,(m-inner)*fd*uDay*.7);
+  if(shop>.5&&vWin.y<fh*.95){float sw=step(.1,fract(vWin.x*1.6))*step(vWin.y,fh*.68)*step(.05,vWin.y);
+   vec3 aw=.25+.6*vec3(fract(sin(vSeed.x*7.1)*99.),fract(sin(vSeed.z*3.7)*99.),fract(sin(vSeed.x*1.3+vSeed.z)*99.));
+   base=mix(base,vec3(.22,.27,.32),sw*uDay*fd);base=mix(base,aw,step(fh*.7,vWin.y)*step(vWin.y,fh*.9)*uDay*fd);}}
+}else base*=mix(.6,.7,uDay);
+diffuseColor.rgb=base;}`;
+function pickW(arr,h){let t=0;for(const a of arr)t+=a[1];let x=h*t;for(const a of arr)if((x-=a[1])<=0)return a[0];return arr[0][0];}
+function paintCity(){
+ // landmarks keep their hand-picked colours unless they have a material override here
+ const LMP={menagerie:{c:['#7d756a','#8a8174','#6f685e','#958b7c'],r:['#3a3e46','#30343b','#41454c'],s:5,g:.45}};
+ const lmAt=b=>{for(let i=0;i<LM.length;i++){const l=LM[i];if(Math.hypot(b.x-l.x,b.y-l.y)<EXC[i].r+.25)return l;}return null;};
+ const A=new Float32Array(Math.max(1,BODY.length)*3);
+ BODY.forEach((b,i)=>{const d=D[b.did];if(!d||!landAt(b.x,b.y))return;const l=lmAt(b);let P=PAL[d.key];
+  if(l){if(!LMP[l.id])return;P=LMP[l.id];}if(!P)return;
+  // all segments of one building share x/y, so they share colour and material
+  const kx=Math.round(b.x*100),ky=Math.round(b.y*100),h1=hash(kx,ky),h2=hash(ky+7,kx+3),h3=hash(kx+11,ky+29);
+  const col=n01(hx(P.c[(h1*P.c.length)|0])).map(v=>Math.min(1,v*.82*(.9+h2*.18)));
+  b.pal=col;b.pn=mix(b.c,col.map(v=>v*.22),.55);
+  A.set([l?P.s:pickW(P.s,h2),P.g*(.6+.8*h1),!l&&b.y0<.01&&h3<P.shop?1:0],i*3);});
+ ROOF.forEach(b=>{const d=D[b.did];if(!d)return;const l=lmAt(b);let P=PAL[d.key];if(l){if(!LMP[l.id])return;P=LMP[l.id];}if(!P)return;
+  const h=hash(Math.round(b.x*100)+5,Math.round(b.y*100)),col=n01(hx(P.r[(h*P.r.length)|0])).map(v=>v*.9);b.pal=col;b.pn=mix(b.c,col.map(v=>v*.25),.5);});
+ CYL.forEach(b=>{const l=lmAt(b);if(l&&l.id==='menagerie'&&b.w>.5){b.pal=n01(hx('#857c70'));b.pn=b.pal.map(v=>v*.2);}});
+ // slate / tile texture on every pitched roof: staggered courses with gaps, per-tile tone variation
+ const rm=DIMS[2][0].material;
+ rm.onBeforeCompile=s=>{
+  s.vertexShader='varying vec3 vRf;\n'+s.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
+vec3 rs=vec3(1.);
+#ifdef USE_INSTANCING
+rs=vec3(length(instanceMatrix[0].xyz),length(instanceMatrix[1].xyz),length(instanceMatrix[2].xyz));
+#endif
+vRf=vec3(position.z*rs.z,position.y*rs.y,0.);`).replace('#include <project_vertex>','#include <project_vertex>\nvRf.z=-mvPosition.z;');
+  s.fragmentShader='varying vec3 vRf;\n'+s.fragmentShader.replace('#include <lightmap_fragment>',`{float fd=1.-smoothstep(15.,60.,vRf.z);vec2 t=vec2(vRf.x*9.,vRf.y*14.);t.x+=step(1.,mod(floor(t.y),2.))*.5;vec2 tf=fract(t);
+ float v=.86+.26*fract(sin(dot(floor(t),vec2(5.3,7.9)))*437.),gap=max(step(tf.y,.14),step(tf.x,.06));
+ diffuseColor.rgb*=mix(1.,v*mix(1.,.6,gap),fd);}
+#include <lightmap_fragment>`);};
+ rm.needsUpdate=true;
+ bodyM.geometry.setAttribute('aSty',new THREE.InstancedBufferAttribute(A,3));
+ const m=bodyM.material,prev=m.onBeforeCompile;
+ m.onBeforeCompile=s=>{prev(s);s.uniforms.uDay=DN.gU;
+  s.vertexShader='attribute vec3 aSty;varying vec3 vSty;\n'+s.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nvSty=aSty;');
+  s.fragmentShader='uniform float uDay;varying vec3 vSty;\n'+s.fragmentShader.replace('#include <lightmap_fragment>',FACADE+'\n#include <lightmap_fragment>');};
+ m.needsUpdate=true;}
 function gantry(cx,cy,nx,ny,did){const r=-Math.atan2(ny,nx),C=[.75,.22,.1],ux=-ny,uy=nx;
  for(const a of [-.35,.35])for(const b of [-.3,.45])box(PROP,cx+ux*a+nx*b,cy+uy*a+ny*b,.08,.08,2.3,r,C,did);
  box(PROP,cx+nx*.075,cy+ny*.075,.85,.8,.1,r,C,did,2.25);box(PROP,cx+nx*.6,cy+ny*.6,3.4,.16,.14,r,C,did,2.45);box(PROP,cx-nx*.55,cy-ny*.55,.55,.5,.38,r,[.6,.6,.62],did,2.3);
