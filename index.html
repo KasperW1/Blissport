@@ -55,6 +55,18 @@ html,body{margin:0;height:100%;background:#05040c;color:var(--txt);font-family:u
 #toolbar button.on{color:#fff;background:rgba(255,61,165,.24)}
 #compass{right:16px;bottom:16px;width:58px;height:58px;border-radius:50%;padding:0}
 #needle{width:100%;height:100%;display:block}
+#nav{right:16px;bottom:86px;width:60px;padding:6px 5px;display:flex;flex-direction:column;align-items:center;gap:3px}
+#nav button{width:48px;height:26px;border:none;border-radius:8px;background:rgba(255,255,255,.05);color:#d8d4f0;font-size:14px;cursor:pointer;display:grid;place-items:center;padding:0;font-family:inherit;user-select:none;-webkit-user-select:none;touch-action:none}
+#nav button:hover{background:rgba(255,255,255,.12);color:#fff}
+#nav button.hold{background:rgba(255,61,165,.38);color:#fff}
+#nav .row{display:flex;gap:3px}#nav .row button{width:23px}
+#nav .dpad{display:grid;grid-template-columns:repeat(3,16px);grid-template-rows:repeat(3,16px);gap:1px}
+#nav .dpad button{width:16px;height:16px;font-size:8px;border-radius:4px}
+#nav .sep{width:70%;height:1px;background:rgba(255,255,255,.1);margin:2px 0}
+#nav .tp{font-size:7.5px;font-weight:800;letter-spacing:.06em;height:22px}
+#nav .tp.on{background:rgba(255,61,165,.32);color:#fff;box-shadow:0 0 12px rgba(255,61,165,.35)}
+#info{max-height:calc(100% - 330px)}
+@media (max-width:760px){#nav{display:none}#info{max-height:38%}}
 #hint{position:absolute;left:16px;bottom:20px;font-size:11.5px;color:var(--mut);pointer-events:none;max-width:38%}
 #tip{position:fixed;left:0;top:0;pointer-events:none;opacity:0;transition:opacity .12s;background:rgba(6,5,16,.92);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:7px 10px;font-size:12.5px;z-index:9}
 #tip span{display:block;font-size:10px;letter-spacing:.14em;text-transform:uppercase;margin-top:2px}
@@ -102,7 +114,23 @@ html,body{margin:0;height:100%;background:#05040c;color:var(--txt);font-family:u
   <button data-act="lm" class="on">Landmarks</button>
  </div>
  <div id="compass" class="card"><svg id="needle" viewBox="0 0 60 60"><circle cx="30" cy="30" r="21" fill="none" stroke="rgba(255,255,255,.12)"/><path d="M30 11 L35 30 L30 27 L25 30Z" fill="#ff3da5"/><path d="M30 49 L35 30 L30 33 L25 30Z" fill="#3b3470"/><text x="30" y="8.5" text-anchor="middle" font-size="7.5" font-weight="800" fill="#fff" font-family="sans-serif">N</text></svg></div>
- <div id="hint">Drag to orbit · Right-drag / Shift-drag to pan · Scroll or pinch to zoom · Click any district</div>
+ <div id="nav" class="card">
+  <button data-n="zin" title="Zoom in  (+)">＋</button>
+  <button data-n="zout" title="Zoom out  (−)">－</button>
+  <div class="sep"></div>
+  <div class="dpad">
+   <button data-n="up" style="grid-area:1/2" title="Pan up  (W / ↑)">▲</button>
+   <button data-n="left" style="grid-area:2/1" title="Pan left  (A / ←)">◀</button>
+   <button data-n="right" style="grid-area:2/3" title="Pan right  (D / →)">▶</button>
+   <button data-n="down" style="grid-area:3/2" title="Pan down  (S / ↓)">▼</button>
+  </div>
+  <div class="sep"></div>
+  <div class="row"><button data-n="rl" title="Rotate left  (Q)">⟲</button><button data-n="rr" title="Rotate right  (E)">⟳</button></div>
+  <div class="row"><button data-n="tu" title="Tilt toward top-down  (R)">⤒</button><button data-n="td" title="Tilt toward horizon  (F)">⤓</button></div>
+  <div class="sep"></div>
+  <button data-n="tp" class="tp" title="Trackpad mode: two-finger scroll pans, pinch zooms, ⌥/Alt + scroll rotates & tilts">TRACKPAD</button>
+ </div>
+ <div id="hint">Drag to orbit · Right/Shift-drag to pan · Scroll or pinch to zoom · Keys: WASD/arrows pan, Q/E rotate, R/F tilt, +/− zoom</div>
  <div id="tip"></div>
  <div id="loading"><div class="spin"></div><div>LIGHTING UP BLISSPORT…</div></div>
 </div>
@@ -321,7 +349,7 @@ function dayStep(){if(!DN.ready)initDN();
  DN.day+=clamp(DN.target-DN.day,-.022,.022);DN.applied=true;applyDay(DN.day);}
 
 function render(){
- dayStep();
+ dayStep();{const t=clock.getElapsedTime();FRAMEHOOKS.forEach(f=>f(t));}
  renderRefl(clock.getElapsedTime());
  if(!post.on){renderer.setRenderTarget(null);renderer.render(scene,camera);return;}
  renderer.setRenderTarget(post.rs);renderer.render(scene,camera);
@@ -744,6 +772,48 @@ function menagerie(x,y,did){
  const lN=new THREE.Color(0x0e2612),lD=new THREE.Color(0x2f5a2a);
  VHOOKS.push(e=>{lawnM.color.copy(lN).lerp(lD,e);glass.material.emissiveIntensity=1-.85*e;});
  return 4.7;}
+// ---------------- GREENWAY: tree tunnels, green lamps, fairy lights, ivy, drifting mist ----------------
+const FRAMEHOOKS=[]; // per-frame animation callbacks
+function greenwayPlus(){
+ const id=ID.greenway,d=D[id],st=ST[id],[s,a,sw]=d.st,ca=Math.cos(a),sa=Math.sin(a),hw=sw/2,TR=[.2,.15,.1],FAIRY=[];
+ const toXY=(u,v)=>[u*ca-v*sa,u*sa+v*ca];
+ const inG=(x,y)=>landAt(x,y)&&distAt(x,y)===id&&roadDist(x,y)>.45&&(((x-55)/4.8)**2+((y-53.5)/4.4)**2)>1;
+ const G=()=>n01(mix([34,140,70],[14,84,40],rand())),IV=()=>n01(mix([14,46,20],[40,96,36],rand()));
+ let u0=1e9,u1=-1e9,v0=1e9,v1=-1e9;
+ for(const c of [[st.x0,st.y0],[st.x1,st.y0],[st.x0,st.y1],[st.x1,st.y1]]){const u=c[0]*ca+c[1]*sa,v=-c[0]*sa+c[1]*ca;u0=Math.min(u0,u);u1=Math.max(u1,u);v0=Math.min(v0,v);v1=Math.max(v1,v);}
+ const tree=(x,y)=>{const th=R(.9,1.5);box(CYL,x,y,.07,.07,th,0,TR,id);
+  for(let k=0;k<2;k++)TREES.push({x:x+R(-.2,.2),y:y+R(-.2,.2),w:R(.75,1.1),dp:R(.75,1.1),h:R(.45,.65),r:rand()*6,c:G(),did:id,y0:th-.3+k*.2});
+  if(rand()<.35){const L=R(.3,.7);box(PROP,x+R(-.25,.25),y+R(-.25,.25),.025,.025,L,0,IV(),id,th-L);}};
+ const lamp=(x,y)=>{box(CYL,x,y,.03,.03,.75,0,[.08,.1,.09],id);box(NEON,x,y,.1,.1,.07,0,[.35,1,.55],id,.75);LAMPS.push({x,y,h:.74,c:[.3,1,.55]});};
+ // walk every street centreline; trees and lamps line both edges, half the streets become full canopy tunnels
+ for(const dir of [0,1]){const A0=dir?v0:u0,A1=dir?v1:u1,B0=dir?u0:v0,B1=dir?u1:v1;
+  const ac=dir?[-sa,ca]:[ca,sa],al=dir?[ca,sa]:[-sa,ca];
+  for(let i=Math.floor(A0/s);i<=Math.ceil(A1/s);i++){const c=i*s+hw,tunnel=hash(i*13+dir*7,id)<.5;let n=0;
+   for(let t=B0;t<=B1;t+=.45,n++){const [x,y]=dir?toXY(t,c):toXY(c,t);if(!inG(x,y))continue;
+    const side=(((n/2)|0)%2?1:-1)*(hw-.04),ex=x+ac[0]*side,ey=y+ac[1]*side;
+    if(n%2===0)tree(ex,ey);else if(n%3===1)lamp(ex,ey);else TREES.push({x:ex,y:ey,w:R(.3,.45),dp:R(.3,.45),h:R(.22,.35),r:rand()*6,c:G(),did:id,y0:0});
+    if(tunnel){if(n%2===1)TREES.push({x,y,w:R(.95,1.3),dp:R(.95,1.3),h:R(.4,.55),r:rand()*6,c:G(),did:id,y0:R(1.25,1.55)});
+     for(let k=0;k<3;k++){const o=k*.15,z=Math.sin((n*3+k)*1.1)*.1;FAIRY.push([x+al[0]*o+ac[0]*z,y+al[1]*o+ac[1]*z,1.02+.08*Math.sin((n*3+k)*.9)]);}}}}}
+ // ivy and hanging vines on every Greenway building
+ BODY.filter(b=>b.did===id&&b.h>.6).forEach(b=>{
+  for(let q=0;q<10;q++){const f=rand()*4|0,sz=R(.12,.26),z=b.h*Math.pow(rand(),.8);let ox,oz;
+   if(f<2){ox=R(-b.w/2,b.w/2);oz=(f?1:-1)*(b.dp/2+.03);}else{ox=(f===2?-1:1)*(b.w/2+.03);oz=R(-b.dp/2,b.dp/2);}
+   const [px,py]=L2W(b.x,b.y,b.r,ox,oz);TREES.push({x:px,y:py,w:sz,dp:sz,h:sz*.8,r:rand()*6,c:IV(),did:id,y0:Math.max(0,z-sz*.4)});}
+  for(let q=0;q<3;q++){const L=R(.2,.6),[px,py]=L2W(b.x,b.y,b.r,R(-b.w/2,b.w/2),(rand()<.5?1:-1)*(b.dp/2+.02));box(PROP,px,py,.025,.025,L,b.r,IV(),id,b.h-L);}});
+ // fairy lights strung under the canopy tunnels (kept in a group so day/night lamp switching stays separate)
+ const grp=new THREE.Group();scene.add(grp);
+ const fp=new Float32Array(FAIRY.length*3),fc=new Float32Array(FAIRY.length*3);
+ FAIRY.forEach((f,i)=>{fp.set([f[0]-MW/2,f[2],f[1]-MH/2],i*3);const w=rand();fc.set(w<.6?[.4,1,.6]:w<.85?[1,.9,.65]:[.8,1,.9],i*3);});
+ const fg=new THREE.BufferGeometry();fg.setAttribute('position',new THREE.BufferAttribute(fp,3));fg.setAttribute('color',new THREE.BufferAttribute(fc,3));
+ const fm=new THREE.PointsMaterial({size:.32,map:glowTex([[0,'rgba(255,255,255,1)'],[.3,'rgba(255,255,255,.5)'],[1,'rgba(255,255,255,0)']],32),vertexColors:true,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending});
+ grp.add(new THREE.Points(fg,fm));
+ // slow-drifting green-tinted mist layers through the whole neighbourhood
+ const mt=glowTex([[0,'rgba(150,185,160,1)'],[1,'rgba(150,185,160,0)']],64),MIST=[];
+ for(let q=0;q<70;q++){const x=R(st.x0,st.x1),y=R(st.y0,st.y1);if(distAt(x,y)!==id)continue;const sz=R(2.5,4.5);
+  const m=new THREE.Mesh(new THREE.PlaneGeometry(sz,sz),new THREE.MeshBasicMaterial({map:mt,transparent:true,opacity:0,depthWrite:false}));
+  m.rotation.x=-Math.PI/2;m.position.set(x-MW/2,R(.25,1.1),y-MH/2);grp.add(m);MIST.push({m,x:m.position.x,z:m.position.z,o:R(.1,.18),p:rand()*6.28,sp:R(.05,.12)});}
+ FRAMEHOOKS.push(t=>{const dy=DN.day||0,nt=1-.5*dy;fm.opacity=(1-dy)*(.8+.2*Math.sin(t*2.7));
+  MIST.forEach(k=>{k.m.position.x=k.x+Math.sin(t*k.sp+k.p)*.7;k.m.position.z=k.z+Math.cos(t*k.sp*.8+k.p)*.5;k.m.material.opacity=k.o*nt*(.75+.25*Math.sin(t*.3+k.p));});});}
 function gantry(cx,cy,nx,ny,did){const r=-Math.atan2(ny,nx),C=[.75,.22,.1],ux=-ny,uy=nx;
  for(const a of [-.35,.35])for(const b of [-.3,.45])box(PROP,cx+ux*a+nx*b,cy+uy*a+ny*b,.08,.08,2.3,r,C,did);
  box(PROP,cx+nx*.075,cy+ny*.075,.85,.8,.1,r,C,did,2.25);box(PROP,cx+nx*.6,cy+ny*.6,3.4,.16,.14,r,C,did,2.45);box(PROP,cx-nx*.55,cy-ny*.55,.55,.5,.38,r,[.6,.6,.62],did,2.3);
@@ -806,7 +876,7 @@ function generate(){
  arterialsPre();
  const XR={sunday:2,ranch:2.5,hospital:1.9,candy:1.5,vault:1.6,cake:1.4,orphanage:1.9,menagerie:4.7,playground:1.3,petite:1.3};
  LM.forEach((l,i)=>{if(XR[l.id])EXC[i].r=XR[l.id];});
- for(let id=0;id<D.length;id++)placeDistrict(id);woods();harbour();harbourPlus();bridges();construction();LM.forEach(lmBuild);
+ for(let id=0;id<D.length;id++)placeDistrict(id);woods();harbour();harbourPlus();bridges();construction();LM.forEach(lmBuild);greenwayPlus();
  arterialsPost();}
 // per-pixel street renderer: asphalt, sidewalks, centre lines, crosswalks, lit pools at night; arterials with lanes/medians
 const STREET_HEAD='uniform sampler2D tDist;uniform vec4 uG[19];uniform vec4 uK[19];uniform vec3 uSN[19];uniform vec4 uSeg[48];uniform vec4 uSWv[12];uniform float uNS;uniform vec4 uRb;\n'+
@@ -1067,7 +1137,33 @@ function up(e){if(!ptrs.has(e.pointerId))return;ptrs.delete(e.pointerId);
 el.addEventListener('pointerup',up);el.addEventListener('pointercancel',up);
 el.addEventListener('pointerleave',()=>{tip.style.opacity=0;hover=null;});
 el.addEventListener('contextmenu',e=>e.preventDefault());
-el.addEventListener('wheel',e=>{e.preventDefault();fly=null;radius=clamp(radius*Math.exp(e.deltaY*.0011),18,240);},{passive:false});
+// ---- navigation for trackpads, keyboards and on-screen buttons
+const NAV={keys:new Set(),hold:null,tp:false,hinted:false};
+const HINT_DEF=$('hint').textContent,HINT_TP='Trackpad mode: two-finger scroll to pan · pinch to zoom · ⌥/Alt + scroll to rotate & tilt · click-drag to orbit';
+el.addEventListener('wheel',e=>{e.preventDefault();fly=null;
+ if(e.ctrlKey){radius=clamp(radius*Math.exp(e.deltaY*.012),18,240);return;}            // trackpad pinch (Chrome, Edge, Firefox)
+ if(NAV.tp){if(e.altKey){theta-=e.deltaX*.004;phi=clamp(phi-e.deltaY*.004,.12,1.38);}else pan(-e.deltaX*.9,-e.deltaY*.9);return;}
+ if(!NAV.hinted&&Math.abs(e.deltaX)>2){NAV.hinted=true;$('hint').textContent='Using a trackpad? Turn on TRACKPAD mode in the panel at the bottom right for two-finger panning.';}
+ const dy=e.deltaMode===1?e.deltaY*33:e.deltaY;radius=clamp(radius*Math.exp(dy*.0011),18,240);},{passive:false});
+// Safari trackpad pinch / rotate gestures
+let gS=1,gR=0;
+el.addEventListener('gesturestart',e=>{e.preventDefault();gS=1;gR=0;fly=null;});
+el.addEventListener('gesturechange',e=>{e.preventDefault();radius=clamp(radius*gS/e.scale,18,240);gS=e.scale;theta-=(e.rotation-gR)*Math.PI/180;gR=e.rotation;});
+el.addEventListener('gestureend',e=>e.preventDefault());
+// continuous actions (keyboard + held buttons)
+const ACT={up:()=>pan(0,4),down:()=>pan(0,-4),left:()=>pan(4,0),right:()=>pan(-4,0),zin:()=>radius=clamp(radius*.978,18,240),zout:()=>radius=clamp(radius/.978,18,240),
+ rl:()=>theta+=.022,rr:()=>theta-=.022,tu:()=>phi=clamp(phi-.014,.12,1.38),td:()=>phi=clamp(phi+.014,.12,1.38)};
+const KM={arrowup:'up',w:'up',arrowdown:'down',s:'down',arrowleft:'left',a:'left',arrowright:'right',d:'right','+':'zin','=':'zin','-':'zout','_':'zout',q:'rl',e:'rr',r:'tu',f:'td'};
+addEventListener('keydown',e=>{if(e.metaKey||e.ctrlKey||e.altKey)return;const k=e.key.toLowerCase();if(!KM[k])return;NAV.keys.add(k);fly=null;if(k.startsWith('arrow'))e.preventDefault();});
+addEventListener('keyup',e=>NAV.keys.delete(e.key.toLowerCase()));
+addEventListener('blur',()=>NAV.keys.clear());
+FRAMEHOOKS.push(()=>{NAV.keys.forEach(k=>ACT[KM[k]]());if(NAV.hold)ACT[NAV.hold]();});
+const navEl=$('nav');
+navEl.addEventListener('pointerdown',e=>{const b=e.target.closest('[data-n]');if(!b)return;e.preventDefault();const n=b.dataset.n;
+ if(n==='tp'){NAV.tp=!NAV.tp;b.classList.toggle('on',NAV.tp);$('hint').textContent=NAV.tp?HINT_TP:HINT_DEF;return;}
+ fly=null;for(let i=0;i<6;i++)ACT[n]();NAV.hold=n;b.classList.add('hold');b.setPointerCapture(e.pointerId);});
+const navRel=()=>{NAV.hold=null;navEl.querySelectorAll('.hold').forEach(b=>b.classList.remove('hold'));};
+['pointerup','pointercancel','lostpointercapture'].forEach(ev=>navEl.addEventListener(ev,navRel));
 addEventListener('keydown',e=>{if(e.key==='Escape'){select([]);infoDefault();}});
 function doHover(){const d=pickAt(hover.x,hover.y);if(d===null){tip.style.opacity=0;el.style.cursor='grab';return;}const g=GROUPS[D[d].g];
  tip.innerHTML=`<b>${D[d].sub?D[d].short:D[d].num} · ${D[d].name}</b><span style="color:${g.col}">${g.name}</span>`;tip.style.transform=`translate(${hover.x+16}px,${hover.y+16}px)`;tip.style.opacity=1;el.style.cursor='pointer';}
