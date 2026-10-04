@@ -55,6 +55,21 @@ html,body{margin:0;height:100%;background:#05040c;color:var(--txt);font-family:u
 #toolbar button.on{color:#fff;background:rgba(255,61,165,.24)}
 #compass{right:16px;bottom:16px;width:58px;height:58px;border-radius:50%;padding:0}
 #needle{width:100%;height:100%;display:block}
+.card{transition:opacity .3s,transform .4s cubic-bezier(.2,.8,.2,1)}
+.tab{position:absolute;z-index:5;border:1px solid var(--line);background:var(--card);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);color:#d8d4f0;font-family:inherit;font-size:12px;font-weight:700;border-radius:10px;padding:7px 10px;cursor:pointer;white-space:nowrap;box-shadow:0 6px 20px rgba(0,0,0,.4);transition:left .4s cubic-bezier(.2,.8,.2,1),right .4s cubic-bezier(.2,.8,.2,1),opacity .3s}
+.tab:hover{color:#fff;background:rgba(40,30,70,.88)}
+#tabL{left:282px;top:112px}
+#tabR{right:352px;top:16px}
+#wrap.noL #legend{transform:translateX(-300px);opacity:0;pointer-events:none}
+#wrap.noL #tabL{left:8px}
+#wrap.noR #info{transform:translateX(370px);opacity:0;pointer-events:none}
+#wrap.noR #tabR{right:8px}
+#tabR.ping{animation:ping 1s ease 3}
+@keyframes ping{50%{box-shadow:0 0 0 4px rgba(255,61,165,.45),0 0 22px rgba(255,61,165,.6);color:#fff}}
+#showUI{display:none;left:16px;bottom:16px}
+#wrap.clean>.card,#wrap.clean>.tab,#wrap.clean>#hint{opacity:0;pointer-events:none}
+#wrap.clean #showUI{display:block;opacity:1;pointer-events:auto}
+@media (max-width:760px){#tabL{display:none}#tabR{right:16px;top:72px}#wrap.noR #info{transform:translateY(120%)}#wrap.noR #tabR{right:16px}}
 #nav{right:16px;bottom:86px;width:60px;padding:6px 5px;display:flex;flex-direction:column;align-items:center;gap:3px}
 #nav button{width:48px;height:26px;border:none;border-radius:8px;background:rgba(255,255,255,.05);color:#d8d4f0;font-size:14px;cursor:pointer;display:grid;place-items:center;padding:0;font-family:inherit;user-select:none;-webkit-user-select:none;touch-action:none}
 #nav button:hover{background:rgba(255,255,255,.12);color:#fff}
@@ -103,7 +118,10 @@ html,body{margin:0;height:100%;background:#05040c;color:var(--txt);font-family:u
  <div id="title" class="card"><div class="eyebrow">CITY ATLAS · AFTER DARK</div><h1>BLISSPORT</h1><div class="sub">Interactive 3D night map</div></div>
  <button id="legendBtn" class="card">☰ Districts</button>
  <aside id="legend" class="card"></aside>
+ <button id="tabL" class="tab" title="Hide districts panel">‹</button>
  <section id="info" class="card"></section>
+ <button id="tabR" class="tab" title="Hide info panel">›</button>
+ <button id="showUI" class="tab" title="Show menus (H)">◰ Show menus</button>
  <div id="toolbar" class="card">
   <button data-act="reset">⟲ Reset</button>
   <button data-act="rotate">↻ Orbit</button>
@@ -112,6 +130,7 @@ html,body{margin:0;height:100%;background:#05040c;color:var(--txt);font-family:u
   <button data-act="beams" class="on">⇡ Beams</button>
   <button data-act="labels" class="on">Labels</button>
   <button data-act="lm" class="on">Landmarks</button>
+  <button data-act="ui" title="Hide all menus (H)">◱ Hide UI</button>
  </div>
  <div id="compass" class="card"><svg id="needle" viewBox="0 0 60 60"><circle cx="30" cy="30" r="21" fill="none" stroke="rgba(255,255,255,.12)"/><path d="M30 11 L35 30 L30 27 L25 30Z" fill="#ff3da5"/><path d="M30 49 L35 30 L30 33 L25 30Z" fill="#3b3470"/><text x="30" y="8.5" text-anchor="middle" font-size="7.5" font-weight="800" fill="#fff" font-family="sans-serif">N</text></svg></div>
  <div id="nav" class="card">
@@ -1164,6 +1183,19 @@ navEl.addEventListener('pointerdown',e=>{const b=e.target.closest('[data-n]');if
  fly=null;for(let i=0;i<6;i++)ACT[n]();NAV.hold=n;b.classList.add('hold');b.setPointerCapture(e.pointerId);});
 const navRel=()=>{NAV.hold=null;navEl.querySelectorAll('.hold').forEach(b=>b.classList.remove('hold'));};
 ['pointerup','pointercancel','lostpointercapture'].forEach(ev=>navEl.addEventListener(ev,navRel));
+// ---- collapsible side panels & clean view
+const tabL=$('tabL'),tabR=$('tabR');
+function setPanel(side,open){wrap.classList.toggle(side==='L'?'noL':'noR',!open);
+ if(side==='L'){tabL.textContent=open?'‹':'☰ Districts ›';tabL.title=open?'Hide districts panel':'Show districts panel';}
+ else{tabR.textContent=open?'›':'‹ ⓘ Info';tabR.title=open?'Hide info panel':'Show info panel';tabR.classList.remove('ping');}}
+tabL.onclick=()=>setPanel('L',wrap.classList.contains('noL'));
+tabR.onclick=()=>setPanel('R',wrap.classList.contains('noR'));
+new MutationObserver(()=>{if(wrap.classList.contains('noR')){tabR.classList.remove('ping');void tabR.offsetWidth;tabR.classList.add('ping');}}).observe(info,{childList:true});
+function setClean(on){wrap.classList.toggle('clean',on);if(on)tip.style.opacity=0;}
+$('showUI').onclick=()=>setClean(false);
+$('toolbar').addEventListener('click',e=>{const b=e.target.closest('button');if(b&&b.dataset.act==='ui')setClean(true);});
+addEventListener('keydown',e=>{if(e.metaKey||e.ctrlKey||e.altKey)return;const k=e.key.toLowerCase();
+ if(k==='h')setClean(!wrap.classList.contains('clean'));else if(k==='escape'&&wrap.classList.contains('clean'))setClean(false);});
 addEventListener('keydown',e=>{if(e.key==='Escape'){select([]);infoDefault();}});
 function doHover(){const d=pickAt(hover.x,hover.y);if(d===null){tip.style.opacity=0;el.style.cursor='grab';return;}const g=GROUPS[D[d].g];
  tip.innerHTML=`<b>${D[d].sub?D[d].short:D[d].num} · ${D[d].name}</b><span style="color:${g.col}">${g.name}</span>`;tip.style.transform=`translate(${hover.x+16}px,${hover.y+16}px)`;tip.style.opacity=1;el.style.cursor='pointer';}
