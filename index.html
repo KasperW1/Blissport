@@ -126,6 +126,7 @@ html,body{margin:0;height:100%;background:#05040c;color:var(--txt);font-family:u
   <button data-act="reset">⟲ Reset</button>
   <button data-act="rotate">↻ Orbit</button>
   <button data-act="day" id="dayBtn">☀ Day</button>
+  <button data-act="snow" id="snowBtn">❄ Snow</button>
   <button data-act="glow" class="on">✦ Glow</button>
   <button data-act="beams" class="on">⇡ Beams</button>
   <button data-act="labels" class="on">Labels</button>
@@ -430,8 +431,55 @@ function dayStep(){if(!DN.ready)initDN();
  if(DN.applied&&DN.day===DN.target)return;
  DN.day+=clamp(DN.target-DN.day,-.022,.022);DN.applied=true;applyDay(DN.day);}
 
+// ---------------- SNOW MODE ----------------
+// toggled from the toolbar; fades in/out. Shaders get a shared uSnow uniform; flakes are a GPU-animated particle box around the view.
+const SNW={v:0,target:0,ready:false,u:{value:0},last:-1,v2:new THREE.Vector2()};
+$('toolbar').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.dataset.act!=='snow')return;SNW.target=SNW.target?0:1;b.classList.toggle('on',!!SNW.target);});
+function initSnow(){SNW.ready=true;
+ const SC='mix(vec3(.13,.15,.22),vec3(.6,.62,.66),';
+ // ground: full snow on lots, parks, fields and hills; plowed slush on streets and roads (streetlight glow still pools on it)
+ const gm=DN.ground,gp=gm.onBeforeCompile;
+ gm.onBeforeCompile=s=>{gp(s);s.uniforms.uSnow=SNW.u;s.fragmentShader='uniform float uSnow;\n'+s.fragmentShader.replace('diffuseColor.rgb=col;totalEmissiveRadiance=em;}',
+  '{float sm=uSnow*(1.-max(st,inA)*.6);col=mix(col,'+SC+'uDay),sm*(.85+.15*vn(mp*4.)));}diffuseColor.rgb=col;totalEmissiveRadiance=em;}');};gm.needsUpdate=true;
+ // buildings: snow on every roof and a dusting along the floor ledges
+ const bm=bodyM.material,bp=bm.onBeforeCompile;
+ bm.onBeforeCompile=s=>{bp(s);s.uniforms.uSnow=SNW.u;s.fragmentShader='uniform float uSnow;\n'+s.fragmentShader.replace('#include <lightmap_fragment>',
+  'if(vWin.z>.5)diffuseColor.rgb=mix(diffuseColor.rgb,'+SC+'uDay),uSnow*.95);else diffuseColor.rgb=mix(diffuseColor.rgb,'+SC+'uDay),uSnow*.3*step(fract(vWin.y/max(vWinP.z,.2)),.07));\n#include <lightmap_fragment>');};bm.needsUpdate=true;
+ // props, chimneys/tanks, pitched roofs: snow on upward-facing surfaces; trees and pines: snow on the upper crown
+ const wrapTop=(m,amt,src,lo,hi)=>{if(!m)return;const p=m.onBeforeCompile;m.onBeforeCompile=s=>{if(p)p(s);s.uniforms.uSnow=SNW.u;s.uniforms.uDayS=DN.gU;
+  s.vertexShader='varying float vSnN;\n'+s.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nvSnN='+src+';');
+  s.fragmentShader='uniform float uSnow,uDayS;varying float vSnN;\n'+s.fragmentShader.replace('#include <lightmap_fragment>',
+   'diffuseColor.rgb=mix(diffuseColor.rgb,'+SC+'uDayS),uSnow*'+amt+'*smoothstep('+lo+','+hi+',vSnN));\n#include <lightmap_fragment>');};m.needsUpdate=true;};
+ wrapTop(DIMS[1][0].material,'.9','normal.y','.5','.9');wrapTop(DIMS[3][0].material,'.9','normal.y','.5','.9');
+ wrapTop(DIMS[2][0].material,'.92','normal.y','.15','.45');wrapTop(DIMS[5][0].material,'.85','position.y','.45','.85');
+ const cones=scene.children.find(o=>o.isInstancedMesh&&o.geometry.type==='ConeGeometry');if(cones)wrapTop(cones.material,'.8','position.y','.35','.8');
+ // overcast winter sky
+ const sky=scene.children.find(o=>o.isMesh&&o.material.isShaderMaterial&&o.material.side===THREE.BackSide);
+ if(sky){sky.material.uniforms.uSnow=SNW.u;sky.material.fragmentShader='uniform float uSnow;\n'+sky.material.fragmentShader.replace('gl_FragColor=vec4(mix(n,d,uDay),1.);',
+  'vec3 sk=mix(n,d,uDay);sk=mix(sk,mix(vec3(.07,.07,.1),vec3(.62,.64,.68),uDay)*(.85+.15*h),uSnow*.85);gl_FragColor=vec4(sk,1.);');sky.material.needsUpdate=true;}
+ // falling flakes: positions wrap around the camera target, so it always snows where you look
+ const N=26000,W=150,H=45,pos=new Float32Array(N*3),rnd=new Float32Array(N);
+ for(let i=0;i<N;i++){pos[i*3]=Math.random()*W;pos[i*3+1]=Math.random()*H;pos[i*3+2]=Math.random()*W;rnd[i]=Math.random();}
+ const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(pos,3));g.setAttribute('aR',new THREE.BufferAttribute(rnd,1));
+ SNW.mat=new THREE.ShaderMaterial({transparent:true,depthWrite:false,uniforms:{uT:{value:0},uC:{value:new THREE.Vector3()},uO:{value:0},uDay:DN.gU,uScale:{value:500}},
+  vertexShader:`attribute float aR;uniform float uT,uScale;uniform vec3 uC;varying float vA;
+void main(){vec3 p=position;p.y=mod(p.y-uT*(1.1+aR*.9),${H}.);p.x+=sin(uT*.5+aR*40.)*.6;p.z+=cos(uT*.4+aR*25.)*.6;
+p.xz=mod(p.xz-uC.xz+${W/2}.,${W}.)+uC.xz-${W/2}.;vec4 mv=modelViewMatrix*vec4(p,1.);vA=.55+.45*aR;
+gl_PointSize=(.6+aR)*uScale*.25/(-mv.z);gl_Position=projectionMatrix*mv;}`,
+  fragmentShader:`uniform float uO,uDay;varying float vA;void main(){vec2 c=gl_PointCoord-.5;float a=smoothstep(.5,.15,length(c));gl_FragColor=vec4(mix(vec3(.55,.6,.72),vec3(1.),uDay),a*uO*vA);}`});
+ SNW.pts=new THREE.Points(g,SNW.mat);SNW.pts.frustumCulled=false;SNW.pts.visible=false;scene.add(SNW.pts);}
+function snowStep(){if(!SNW.ready){if(!DN.ready)return;initSnow();}
+ SNW.v+=clamp(SNW.target-SNW.v,-.012,.012);const s=SNW.v*SNW.v*(3-2*SNW.v);SNW.u.value=s;
+ const U=SNW.mat.uniforms;U.uT.value=clock.getElapsedTime();U.uO.value=s*.9;U.uC.value.copy(target);U.uScale.value=renderer.getDrawingBufferSize(SNW.v2).y*.5;SNW.pts.visible=s>.001;
+ if(s===0&&SNW.last===0)return;SNW.last=s;
+ // winter weather on top of the current day/night state
+ const d=DN.day,e=d*d*(3-2*d),L=(a,b)=>a+(b-a)*e;
+ scene.fog.color.copy(DN.fogN).lerp(DN.fogD,e).lerp(new THREE.Color().setRGB(L(.06,.66),L(.06,.68),L(.09,.72)),s*.8);
+ scene.fog.near=L(210,260)*(1-.6*s);scene.fog.far=L(440,720)*(1-.5*s);
+ moon.intensity=L(.5,1)*(1-.45*s);DN.hemi.intensity=L(.34,.62)*(1+.2*s);DN.stars.material.opacity=.7*(1-e)*(1-s);}
+
 function render(){
- dayStep();{const t=clock.getElapsedTime();FRAMEHOOKS.forEach(f=>f(t));}
+ dayStep();snowStep();{const t=clock.getElapsedTime();FRAMEHOOKS.forEach(f=>f(t));}
  renderRefl(clock.getElapsedTime());
  if(!post.on){renderer.setRenderTarget(null);renderer.render(scene,camera);return;}
  renderer.setRenderTarget(post.rs);renderer.render(scene,camera);
