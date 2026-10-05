@@ -510,6 +510,7 @@ function buildMaps(){
  ISLETS.forEach(i=>{m.beginPath();m.arc(i[0]*S,i[1]*S,i[2]*S,0,7);m.fill();});
  m.strokeStyle='#000';m.lineWidth=1.05*S;m.lineCap='round';m.lineJoin='round';
  CANALS.forEach(C=>{m.beginPath();C.forEach((p,i)=>i?m.lineTo(p[0]*S,p[1]*S):m.moveTo(p[0]*S,p[1]*S));m.stroke();});
+ m.lineWidth=.55*S;RII.forEach(C=>{m.beginPath();C.forEach((p,i)=>i?m.lineTo(p[0]*S,p[1]*S):m.moveTo(p[0]*S,p[1]*S));m.stroke();}); // Little Venice's narrow side canals
  const md=m.getImageData(0,0,PW,PH).data;land=new Uint8Array(PW*PH);for(let i=0;i<PW*PH;i++)land[i]=md[i*4]>127?1:0;
  dgrid=new Int8Array(DW*DH);landH=new Uint8Array(DW*DH);
  for(let gy=0;gy<DH;gy++)for(let gx=0;gx<DW;gx++){const i=gy*DW+gx;dgrid[i]=classify((gx+.5)/DS,(gy+.5)/DS);landH[i]=land[(gy*2+1)*PW+gx*2+1];}
@@ -1568,6 +1569,110 @@ function tinYard(){
   const use=big?(h<.2?'mall':'factory'):(h<.82?'factory':h<.91?'market':'lot');
   ({mall,factory,market,lot})[use](bu0,bu1,bv0,bv1);
   if(rand()<.35){const [px,py]=toXY(bu0-sw*.5+.05,R(bv0,bv1));barrel(px,py);}}}
+// ---------------- LITTLE VENICE: rii, campo & campanile, terracotta rooftops, footbridges, gondolas ----------------
+// narrow side canals branching off the end of the main canal (one loop forms the campo island)
+const RII=[[[60.6,45.3],[58.6,45.55],[56.6,45.1],[55.4,44.6]],[[59.4,45.45],[59.2,44.2],[58.4,43.1]],[[56.6,45.1],[56.9,43.7],[58.4,43.1],[59.9,42.6]],[[57.6,45.4],[57.4,46.5]]];
+let GONG=null;
+function gondGeo(){if(GONG)return GONG;const s=new THREE.Shape();s.moveTo(-.5,0);s.quadraticCurveTo(0,-.62,.5,0);s.quadraticCurveTo(0,.62,-.5,0);
+ const g=new THREE.ExtrudeGeometry(s,{depth:1,bevelEnabled:false,curveSegments:10});g.rotateX(-Math.PI/2);g.computeVertexNormals();return GONG=g;}
+function littleVenice(){gondGeo();const id=ID.lv,did=id,STONE=[.85,.83,.78],TERR=[.62,.3,.2],CX=58.1,CY=44.3;
+ // clear the campo, and drop the generic rooftop water tanks
+ for(const L of [BODY,ROOF,CYL,PROP,NEON,TREES])for(let i=L.length-1;i>=0;i--){const b=L[i];if(b.did!==id)continue;
+  if(Math.hypot(b.x-CX,b.y-CY)<1.25||(L===CYL&&b.w===.36)||(L===PROP&&b.w===.3&&b.dp===.3&&b.h===.15))L.splice(i,1);}
+ // Venetian rooftops: terracotta hip roofs or wooden altane, funnel chimneys, small stone balconies
+ BODY.filter(b=>b.did===id&&b.y0<.01).forEach(b=>{const w=b.w,dp=b.dp,h=b.h;
+  if(rand()<.7){const rh=Math.min(w,dp)*.28;box(ROOF,b.x,b.y,w*1.04,dp*1.04,rh,b.r,TERR,did,h);box(ROOF,b.x,b.y,dp*1.04,w*1.04,rh,b.r+Math.PI/2,TERR,did,h);}
+  else{const [ax,ay]=L2W(b.x,b.y,b.r,w*.15,0);for(const [ox,oz] of [[-.18,-.15],[.18,-.15],[-.18,.15],[.18,.15]]){const [px,py]=L2W(ax,ay,b.r,ox,oz);box(CYL,px,py,.025,.025,.22,0,[.4,.28,.18],did,h);}
+   box(PROP,ax,ay,.45,.38,.03,b.r,[.5,.36,.22],did,h+.22);}
+  if(rand()<.6){const [cx,cy]=L2W(b.x,b.y,b.r,R(-w*.3,w*.3),R(-dp*.3,dp*.3));box(CYL,cx,cy,.07,.07,.35,0,[.62,.35,.25],did,h);box(CYL,cx,cy,.16,.16,.1,0,[.62,.35,.25],did,h+.35);}
+  if(rand()<.6){const [px,py]=L2W(b.x,b.y,b.r,R(-w*.25,w*.25),(rand()<.5?1:-1)*(dp/2+.05));box(PROP,px,py,.3,.1,.03,b.r,STONE,did,h*R(.45,.7));}});
+ // the campo: stone paving with Istrian-stone lines, a wellhead, a white church front and the brick campanile
+ box(PROP,CX,CY,2.2,2.2,.015,0,[.74,.7,.64],did);for(let k=-2;k<=2;k++){box(PROP,CX+k*.42,CY,.03,2.2,.018,0,[.9,.88,.84],did);box(PROP,CX,CY+k*.42,2.2,.03,.018,0,[.9,.88,.84],did);}
+ box(CYL,CX,CY,.22,.22,.18,0,STONE,did);box(CYL,CX,CY,.16,.16,.012,0,[.08,.08,.1],did,.18);
+ box(BODY,CX-.6,CY-.85,1.1,.7,1.4,0,[.86,.84,.8],did,0,{win:[.4,0,.5]});box(ROOF,CX-.6,CY-.85,1.15,.75,.45,0,[.55,.3,.22],did,1.4);
+ // café corner on the campo: little round tables under cream parasols
+ for(const [ox,oy] of [[.45,-.5],[.8,-.15],[.85,-.75]]){const tx=CX+ox,ty=CY+oy;box(CYL,tx,ty,.13,.13,.1,0,[.92,.9,.86],did);box(CYL,tx,ty,.015,.015,.3,0,[.5,.45,.4],did,.1);
+  box(CYL,tx,ty,.34,.34,.025,0,[.9,.85,.72],did,.38);for(const s of [-1,1])box(PROP,tx+s*.12,ty,.06,.06,.07,0,[.35,.25,.18],did);LAMPS.push({x:tx,y:ty,h:.32,c:[1,.82,.55]});}
+ for(const [ox,oy] of [[-1,-1],[1,1],[-1,1]]){const lx=CX+ox*.95,ly=CY+oy*.95;box(CYL,lx,ly,.025,.025,.5,0,[.12,.12,.13],did);LAMPS.push({x:lx,y:ly,h:.55,c:[1,.8,.5]});}
+ // along every rio: stone fondamenta edges, lanterns, arched footbridges, striped mooring poles, gondolas
+ const wp=[],wi=[],cp=[],ci=[],HW=.275,bm=new THREE.MeshLambertMaterial({color:0xd8d2c6}),gm=new THREE.MeshLambertMaterial({color:0x0c0c10});
+ const palo=(x,y,col)=>{for(let k=0;k<4;k++)box(CYL,x,y,.035,.035,.12,0,k%2?[.92,.92,.9]:col,did,-.05+k*.12);box(CYL,x,y,.045,.045,.03,0,[.85,.7,.3],did,.43);};
+ RII.forEach(C=>{const pts=[];for(let i=0;i<C.length-1;i++){const a=C[i],b=C[i+1],L=Math.hypot(b[0]-a[0],b[1]-a[1]),ux=(b[0]-a[0])/L,uy=(b[1]-a[1])/L;for(let s=0;s<L;s+=.2)pts.push([a[0]+ux*s,a[1]+uy*s,ux,uy]);}
+  for(const sd of [-1,1]){let prev=null,k=0;
+   for(const p of pts){k++;const nx=-p[3]*sd,ny=p[2]*sd,bx=p[0]+nx*HW,by=p[1]+ny*HW;
+    if(!landAt(bx+nx*.08,by+ny*.08)){prev=null;continue;}
+    if(prev){const b0=wp.length/3,c0=cp.length/3,o=.08;
+     wp.push(prev[0]-MW/2,.1,prev[1]-MH/2,prev[0]-MW/2,-.1,prev[1]-MH/2,bx-MW/2,.1,by-MH/2,bx-MW/2,-.1,by-MH/2);wi.push(b0,b0+2,b0+1,b0+1,b0+2,b0+3);
+     cp.push(prev[0]-MW/2,.1,prev[1]-MH/2,prev[0]+prev[2]*o-MW/2,.1,prev[1]+prev[3]*o-MH/2,bx-MW/2,.1,by-MH/2,bx+nx*o-MW/2,.1,by+ny*o-MH/2);ci.push(c0,c0+2,c0+1,c0+1,c0+2,c0+3);}
+    prev=[bx,by,nx,ny];if(k%5===(sd>0?0:2))LAMPS.push({x:bx+nx*.06,y:by+ny*.06,h:.55,c:[1,.78,.45]});}}
+  const len=pts.length*.2;
+  for(let s=.7;s<len-.4;s+=R(1.1,1.5)){const p=pts[Math.min(pts.length-1,Math.round(s/.2))],nx=-p[3],ny=p[2];
+   if(!landAt(p[0]+nx*.5,p[1]+ny*.5)||!landAt(p[0]-nx*.5,p[1]-ny*.5))continue;
+   if(!GONG.arch){const s=new THREE.Shape();s.moveTo(-.75,0);s.lineTo(-.75,.24);s.quadraticCurveTo(0,.36,.75,.24);s.lineTo(.75,0);s.lineTo(.5,0);s.quadraticCurveTo(0,.42,-.5,0);s.closePath();
+    GONG.arch=new THREE.ExtrudeGeometry(s,{depth:.48,bevelEnabled:false,curveSegments:16});GONG.arch.translate(0,0,-.24);GONG.arch.computeVertexNormals();}
+   const m=new THREE.Mesh(GONG.arch,bm);m.scale.set(.6,.62,.55);m.position.set(p[0]-MW/2,0,p[1]-MH/2);m.rotation.y=-Math.atan2(ny,nx);m.castShadow=m.receiveShadow=true;scene.add(m);
+   LAMPS.push({x:p[0],y:p[1],h:.32,c:[1,.8,.5]});}
+  for(let k=3;k<pts.length-3;k+=4){if(rand()>.45)continue;const p=pts[k],sd=rand()<.5?1:-1,nx=-p[3]*sd,ny=p[2]*sd,gx=p[0]+nx*.12,gy=p[1]+ny*.12,hd=Math.atan2(p[3],p[2])+(rand()<.5?0:Math.PI);
+   if(landAt(gx,gy))continue;
+   const g=new THREE.Mesh(gondGeo(),gm);g.scale.set(.85,.07,.16);g.position.set(gx-MW/2,-.02,gy-MH/2);g.rotation.y=-hd;g.castShadow=true;scene.add(g);
+   const ux=Math.cos(hd),uy=Math.sin(hd);box(PROP,gx+ux*.41,gy+uy*.41,.03,.02,.1,-hd,[.85,.86,.9],did,.03);
+   if(rand()<.4){box(CYL,gx-ux*.34,gy-uy*.34,.035,.035,.1,0,[.08,.08,.1],did,.05);box(CYL,gx-ux*.34,gy-uy*.34,.04,.04,.05,0,[.92,.92,.9],did,.15);box(PROP,gx-ux*.3,gy-uy*.3,.01,.01,.24,0,[.4,.3,.2],did,.03);}
+   const col=pick([[.7,.12,.12],[.15,.25,.6],[.15,.45,.25]]);palo(gx+nx*.12+ux*.32,gy+ny*.12+uy*.32,col);palo(gx+nx*.12-ux*.32,gy+ny*.12-uy*.32,col);}});
+ const mk=(p,i,col)=>{const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(p,3));g.setIndex(i);g.computeVertexNormals();
+  const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({color:col,side:THREE.DoubleSide}));m.receiveShadow=true;scene.add(m);};
+ mk(wp,wi,0x6a6058);mk(cp,ci,0xb8b0a2);}
+// ---------------- LITTLE RIO & LITTLE PALMA: neighbourhood character ----------------
+function clearSquare(id,CX,CY,r){for(const L of [BODY,ROOF,CYL,PROP,NEON,TREES])for(let i=L.length-1;i>=0;i--){const b=L[i];if(b.did!==id)continue;
+ if(Math.hypot(b.x-CX,b.y-CY)<r||(L===CYL&&b.w===.36)||(L===PROP&&b.w===.3&&b.dp===.3&&b.h===.15))L.splice(i,1);}}
+function flatTex(draw,size,rep){const c=document.createElement('canvas');c.width=c.height=size;draw(c.getContext('2d'));const t=new THREE.CanvasTexture(c);
+ t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(rep,rep);t.anisotropy=renderer.capabilities.getMaxAnisotropy();return t;}
+function groundPlane(x,y,w,tex){const m=new THREE.Mesh(new THREE.PlaneGeometry(w,w),new THREE.MeshLambertMaterial({map:tex,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2}));
+ m.rotation.x=-Math.PI/2;m.position.set(x-MW/2,.025,y-MH/2);m.receiveShadow=true;scene.add(m);}
+function palm(x,y,id,h){h=h||R(.7,.95);box(CYL,x,y,.045,.045,h,0,[.42,.32,.22],id);TREES.push({x,y,w:.62,dp:.62,h:.16,r:rand()*6,c:[.14,.46,.2],did:id,y0:h});}
+function littleRio(){const id=ID.lr,CX=57,CY=37.6,VIV=[[.95,.75,.2],[.2,.65,.5],[.95,.4,.3],[.25,.6,.85],[.9,.35,.55],[.6,.8,.3]];
+ clearSquare(id,CX,CY,1.05);
+ BODY.filter(b=>b.did===id&&b.y0<.01).forEach(b=>{const w=b.w,dp=b.dp,h=b.h;
+  // laje roofs: parapet rim, the blue water tank, sometimes an added room on top, laundry lines
+  box(PROP,b.x,b.y,w*1.02,dp*1.02,.06,b.r,[.55,.52,.48],id,h);
+  if(rand()<.7){const [tx,ty]=L2W(b.x,b.y,b.r,R(-w*.3,w*.3),R(-dp*.3,dp*.3));box(CYL,tx,ty,.22,.22,.18,0,[.12,.35,.75],id,h+.06);box(CYL,tx,ty,.24,.24,.03,0,[.1,.3,.65],id,h+.24);}
+  if(rand()<.45){const ew=w*R(.35,.6),ed=dp*R(.35,.6),[ex,ey]=L2W(b.x,b.y,b.r,R(-(w-ew)/2,(w-ew)/2),R(-(dp-ed)/2,(dp-ed)/2));
+   box(PROP,ex,ey,ew,ed,R(.3,.5),b.r,rand()<.5?[.42,.2,.13]:pick(VIV).map(v=>v*.45),id,h+.06);}
+  if(rand()<.3){const [lx,ly]=L2W(b.x,b.y,b.r,0,dp*.25);box(PROP,lx,ly,w*.7,.01,.01,b.r,[.8,.8,.8],id,h+.3);
+   for(let k=0;k<4;k++){const [qx,qy]=L2W(lx,ly,b.r,-w*.3+k*w*.2,0);box(PROP,qx,qy,.07,.012,.09,b.r,pick(VIV),id,h+.21);}}
+  // street murals on some walls
+  if(rand()<.25){const side=rand()<.5?1:-1,mh=Math.min(h*.7,.9),[px,py]=L2W(b.x,b.y,b.r,0,side*(dp/2+.012));
+   const tex=flatTex(g=>{const P=['#ff5a5f','#ffb400','#00a699','#3d5afe','#ff7eb6','#2ec4b6','#ffd23f'];g.fillStyle=pick(P);g.fillRect(0,0,128,128);
+    for(let k=0;k<7;k++){g.fillStyle=pick(P);g.beginPath();g.arc(R(0,128),R(0,128),R(10,40),0,7);g.fill();}
+    g.strokeStyle='#fff';g.lineWidth=5;g.beginPath();for(let xx=0;xx<=128;xx+=4)g.lineTo(xx,64+Math.sin(xx*.1)*18);g.stroke();},128,1);
+   const m=new THREE.Mesh(new THREE.PlaneGeometry(w*.8,mh),new THREE.MeshLambertMaterial({map:tex}));m.position.set(px-MW/2,mh/2+.05,py-MH/2);m.rotation.y=b.r+(side>0?0:Math.PI);scene.add(m);}});
+ // the praça: Copacabana wave mosaic, palms, a little kiosk, plastic tables under parasols, string lights
+ groundPlane(CX,CY,2.1,flatTex(g=>{g.fillStyle='#f2efe8';g.fillRect(0,0,256,256);g.fillStyle='#1a1a1c';
+  for(let band=0;band<4;band++){g.beginPath();for(let xx=0;xx<=256;xx+=4){const yy=band*64+18+Math.sin(xx/256*12.566)*14;xx?g.lineTo(xx,yy):g.moveTo(xx,yy);}
+   for(let xx=256;xx>=0;xx-=4)g.lineTo(xx,band*64+40+Math.sin(xx/256*12.566)*14);g.closePath();g.fill();}},256,3));
+ for(const [ox,oy] of [[-.85,-.85],[.85,-.85],[-.85,.85],[.85,.85],[0,-.95]])palm(CX+ox,CY+oy,id);
+ box(PROP,CX-.45,CY+.35,.34,.34,.34,0,[.15,.5,.32],id);box(ROOF,CX-.45,CY+.35,.42,.42,.18,0,[.15,.45,.3],id,.34);box(ROOF,CX-.45,CY+.35,.42,.42,.18,Math.PI/2,[.15,.45,.3],id,.34);
+ for(const [ox,oy] of [[.35,.15],[.5,.55],[.05,.6]]){const tx=CX+ox,ty=CY+oy;box(CYL,tx,ty,.12,.12,.1,0,[.92,.92,.9],id);box(CYL,tx,ty,.015,.015,.3,0,[.6,.6,.6],id,.1);box(CYL,tx,ty,.32,.32,.025,0,pick(VIV),id,.38);}
+ for(let k=0;k<12;k++){const a=k/12*6.283;LAMPS.push({x:CX+Math.cos(a)*.9,y:CY+Math.sin(a)*.9,h:.62,c:pick([[1,.8,.5],[1,.55,.4],[.9,.9,.6]])});}}
+function littlePalma(){const id=ID.lp,CX=62.5,CY=40.5,TERR=[.66,.36,.24],WHT=[.93,.91,.87],BOUG=[[.82,.18,.55],[.9,.3,.65],[.62,.22,.7],[.95,.45,.7]];
+ clearSquare(id,CX,CY,1.05);
+ BODY.filter(b=>b.did===id&&b.y0<.01).forEach(b=>{const w=b.w,dp=b.dp,h=b.h;
+  // half get low terracotta roofs, half flat terraces with white parapets (some with a pergola and potted plants)
+  if(rand()<.5){const rh=Math.min(w,dp)*.26;box(ROOF,b.x,b.y,w*1.04,dp*1.04,rh,b.r,TERR,id,h);box(ROOF,b.x,b.y,dp*1.04,w*1.04,rh,b.r+Math.PI/2,TERR,id,h);}
+  else{box(PROP,b.x,b.y,w*1.02,dp*1.02,.07,b.r,WHT,id,h);
+   if(rand()<.5){const [px,py]=L2W(b.x,b.y,b.r,w*.15,0);for(const [ox,oz] of [[-.16,-.14],[.16,-.14],[-.16,.14],[.16,.14]]){const [qx,qy]=L2W(px,py,b.r,ox,oz);box(CYL,qx,qy,.02,.02,.24,0,[.45,.32,.2],id,h);}
+    for(let k=0;k<4;k++){const [qx,qy]=L2W(px,py,b.r,-.15+k*.1,0);box(PROP,qx,qy,.03,.34,.02,b.r,[.45,.32,.2],id,h+.24);}}
+   for(let k=0;k<2;k++){const [qx,qy]=L2W(b.x,b.y,b.r,R(-w*.35,w*.35),R(-dp*.35,dp*.35));box(CYL,qx,qy,.07,.07,.07,0,[.65,.35,.22],id,h);TREES.push({x:qx,y:qy,w:.14,dp:.14,h:.16,r:0,c:[.2,.45,.2],did:id,y0:h+.07});}}
+  // bougainvillea spilling down the walls
+  if(rand()<.55){const side=rand()<.5?1:-1;for(let q=0;q<6;q++){const s=R(.12,.24),[px,py]=L2W(b.x,b.y,b.r,R(-w*.4,w*.4),side*(dp/2+.035));
+   TREES.push({x:px,y:py,w:s,dp:s,h:s*.85,r:rand()*6,c:pick(BOUG),did:id,y0:Math.max(0,h*R(.35,.95)-s*.4)});}}});
+ // the plaça: warm sandstone paving, a fountain, palms, olive trees, tiled benches
+ groundPlane(CX,CY,2.1,flatTex(g=>{g.fillStyle='#cbb592';g.fillRect(0,0,128,128);for(let i=0;i<4;i++)for(let j=0;j<4;j++){g.fillStyle=`hsl(36,${28+hash(i,j)*12}%,${62+hash(j,i)*10}%)`;g.fillRect(i*32+1,j*32+1,30,30);}},128,4));
+ box(CYL,CX,CY,.55,.55,.14,0,[.82,.74,.6],id);NCYL.push({x:CX,y:CY,w:.48,dp:.48,h:.02,r:0,c:[.3,.75,.95],did:id,y0:.13});
+ box(CYL,CX,CY,.1,.1,.32,0,[.82,.74,.6],id,.14);box(NEON,CX,CY,.04,.04,.18,0,[.7,.92,1],id,.46);LAMPS.push({x:CX,y:CY,h:.3,c:[.6,.85,1]});
+ for(const [ox,oy] of [[-.85,-.85],[.85,.85],[-.85,.85],[.85,-.85]])palm(CX+ox,CY+oy,id,R(.8,1));
+ for(const [ox,oy] of [[0,-.85],[0,.85],[-.85,0]])TREES.push({x:CX+ox,y:CY+oy,w:.42,dp:.42,h:.38,r:rand()*6,c:[.45,.53,.38],did:id,y0:.12}),box(CYL,CX+ox,CY+oy,.04,.04,.14,0,[.4,.33,.25],id);
+ for(const [ox,oy,rr] of [[.55,0,Math.PI/2],[-.4,-.55,0],[.4,.55,0]]){box(PROP,CX+ox,CY+oy,.4,.1,.1,rr,[.2,.42,.7],id);box(PROP,CX+ox,CY+oy,.4,.1,.02,rr,WHT,id,.1);}
+ for(const [ox,oy] of [[-.6,-.25],[.6,.3],[.2,-.7]])LAMPS.push({x:CX+ox,y:CY+oy,h:.55,c:[1,.82,.55]});}
 function gantry(cx,cy,nx,ny,did){const r=-Math.atan2(ny,nx),C=[.75,.22,.1],ux=-ny,uy=nx;
  for(const a of [-.35,.35])for(const b of [-.3,.45])box(PROP,cx+ux*a+nx*b,cy+uy*a+ny*b,.08,.08,2.3,r,C,did);
  box(PROP,cx+nx*.075,cy+ny*.075,.85,.8,.1,r,C,did,2.25);box(PROP,cx+nx*.6,cy+ny*.6,3.4,.16,.14,r,C,did,2.45);box(PROP,cx-nx*.55,cy-ny*.55,.55,.5,.38,r,[.6,.6,.62],did,2.3);
@@ -1692,7 +1797,7 @@ function generate(){
  arterialsPre();promenadePre();
  const XR={sunday:2,ranch:2.5,hospital:1.9,candy:1.5,vault:1.6,cake:1.4,orphanage:1.9,menagerie:4.7,playground:1.3,petite:1.3,kennels:2.9,unveiling:2.9};
  LM.forEach((l,i)=>{if(XR[l.id])EXC[i].r=XR[l.id];});
- for(let id=0;id<D.length;id++)placeDistrict(id);woods();harbour();harbourPlus();bridges();tinYard();construction();LM.forEach(lmBuild);greenwayPlus();
+ for(let id=0;id<D.length;id++)placeDistrict(id);woods();harbour();harbourPlus();bridges();tinYard();littleVenice();littleRio();littlePalma();construction();LM.forEach(lmBuild);greenwayPlus();
  arterialsPost();terrain();}
 // per-pixel street renderer: asphalt, sidewalks, centre lines, crosswalks, lit pools at night; arterials with lanes/medians
 const STREET_HEAD='uniform sampler2D tDist;uniform vec4 uG[19];uniform vec4 uK[19];uniform vec3 uSN[19];uniform vec4 uSeg[48];uniform vec4 uSWv[12];uniform float uNS;uniform vec4 uRb;\n'+
