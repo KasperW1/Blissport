@@ -208,7 +208,7 @@ const D=[
 {key:'belle',num:'13',name:'Belle Plaza',g:'DOWN',col:'#3de0ff',seeds:[[35,33.5]],w:0,st:[3,0,.42],h:[3,7.5],p:.85,k:1,f:.78,peak:[35,33.5,1.4,50],lh:12,sty:'tower',win:[.55,1,.36],desc:"The main government block, where the Syndicate runs the city. Many high-end apartment buildings surround it."},
 {key:'sky',num:'14',name:'Skyblock',g:'DOWN',col:'#19a7e6',seeds:[[28.5,46]],w:0,st:[2.6,0,.42],h:[4,12],p:.92,k:1,f:.74,peak:[29,46,1.5,45],pow:1,lh:22,sty:'tower',win:[.5,1,.34],desc:"Blissport's main financial business zone, full of tall skyscrapers."},
 {key:'junction',num:'15',name:'The Junction',g:'DOWN',col:'#9be8f2',seeds:[[46,42]],w:0,st:[2.4,.2,.3],h:[1.4,3.8],p:.85,k:2,f:.84,lh:7,sty:'apt',win:[.5,0,.3],desc:"A smaller middle-class neighborhood where Downtown, the RLD and the residential zones all converge. The children's hospital is here, and the Dollhouse used to be here as well."},
-{key:'tin',num:'16',name:'The Tin Yard',g:'DEAD',col:'#d08a5c',seeds:[[20,75.5],[27,86]],w:0,st:[3.4,-.3,.3],h:[.8,2.2],p:.62,k:1,f:.86,lh:6,sty:'factory',win:[.03,3,.45],desc:"Mostly old abandoned factories from the city's industrial past, surrounded by run-down market areas and the skeletons of dead shopping malls. The Kennels are here, and the Unveiling often takes place in this area."},
+{key:'tin',num:'16',name:'The Tin Yard',g:'DEAD',col:'#d08a5c',seeds:[[20,75.5],[27,86]],w:0,st:[2.3,-.3,.22],h:[.8,2.2],p:.62,k:1,f:.86,lh:6,sty:'factory',win:[.03,3,.45],desc:"Mostly old abandoned factories from the city's industrial past, surrounded by run-down market areas and the skeletons of dead shopping malls. The Kennels are here, and the Unveiling often takes place in this area."},
 {key:'slag',num:'17',name:'Slag Town',g:'DEAD',col:'#a87a6a',seeds:[[19.5,57.5]],w:0,st:[1.4,.25,.16],h:[1.8,5.5],p:.97,k:1,f:.92,lh:9,sty:'apt',win:[.3,3,.26],desc:"The most densely populated area of Dead-End. The only laws here are those imposed by local gangs. The Mist Den used to be here."}
 ];
 const ID={};D.forEach((d,i)=>ID[d.key]=i);
@@ -396,7 +396,14 @@ function initDN(){DN.ready=true;
  const dayTex=new THREE.CanvasTexture(buildDayTexture());dayTex.anisotropy=renderer.capabilities.getMaxAnisotropy();
  const gm=slab.material[2];DN.ground=gm;
  gm.onBeforeCompile=s=>{s.uniforms.uDay=DN.gU;s.uniforms.tDay={value:dayTex};
-  s.fragmentShader='uniform float uDay;uniform sampler2D tDay;\n'+s.fragmentShader.replace('#include <map_fragment>','vec4 tn=texture2D(map,vUv),td=texture2D(tDay,vUv)*.62;diffuseColor*=mix(tn,td,uDay);');streetShader(s);};
+  s.fragmentShader='uniform float uDay;uniform sampler2D tDay;\n'+s.fragmentShader.replace('#include <map_fragment>','vec2 uc=clamp(vUv,0.,1.);vec4 tn=texture2D(map,uc),td=texture2D(tDay,uc)*.62;'+
+  // outskirts (and the land beyond the old map edge): natural forest floor instead of farm fields
+  '{vec4 dq=texture2D(tDist,uc);float oob=float(vUv.x<0.||vUv.x>1.||vUv.y<0.||vUv.y>1.);'+
+  'float isO=max(oob,(1.-step(.5,abs(floor(dq.r*255.+.5)-'+OUT+'.)))*(1.-step(.5,dq.g)));'+
+  'if(isO>.5){vec2 q=vec2(vUv.x*120.,(1.-vUv.y)*90.);float n=vn(q*.35)*.6+vn(q*1.7)*.4,m=vn(q*.08+7.);'+
+  'vec3 fl=mix(vec3(.18,.27,.14),vec3(.32,.33,.19),n);fl=mix(fl,vec3(.34,.29,.2),smoothstep(.6,.85,m)*.6);'+
+  'tn=vec4(fl*.06,1.);td=vec4(fl*.62,1.);}}'+
+  'diffuseColor*=mix(tn,td,uDay);');streetShader(s);};
  gm.extensions={derivatives:true};
  gm.needsUpdate=true;
  water.material.fragmentShader=WATER_FS2;water.material.uniforms.uDay={value:0};water.material.needsUpdate=true;
@@ -1234,8 +1241,8 @@ function terrain(){
  // dense forest: noise-driven density, pines more likely higher up, clearings left for fields, roads and estates kept free
  const estates=BODY.filter(b=>b.did===OUT).map(b=>[b.x,b.y]),[s0,a0,sw0]=D[OUT].st,ca=Math.cos(a0),sa=Math.sin(a0),CONES=[];
  const onRoad=(x,y)=>{const u=x*ca+y*sa,v=-x*sa+y*ca,du=((u%s0)+s0)%s0,dv=((v%s0)+s0)%s0;return du<sw0+.22||dv<sw0+.22||du>s0-.22||dv>s0-.22;};
- for(let q=0;q<42000;q++){const x=R(X0,X1),y=R(Y0,Y1);if(inMap(x,y)?(distAt(x,y)!==OUT||!landAt(x,y)):!landX(x,y))continue;
-  const f=fbm(x*.07+3,y*.07+17),dens=segDist(x,y,18,22,35,11)<10?1:f>.36?1:f>.3?.45:.1;if(rand()>dens)continue;
+ for(let q=0;q<52000;q++){const x=R(X0,X1),y=R(Y0,Y1);if(inMap(x,y)?(distAt(x,y)!==OUT||!landAt(x,y)):!landX(x,y))continue;
+  const f=fbm(x*.07+3,y*.07+17),dens=f<.2?.12:1;if(rand()>dens)continue; // wooded almost everywhere, a few small meadows
   if(onRoad(x,y)||roadDist(x,y)<.4||excluded(x,y)||DG.has(ck(x,y))||estates.some(e=>(e[0]-x)**2+(e[1]-y)**2<2.6))continue;
   if(rand()<.35+Math.min(.5,hAt(x,y)/10)){const s=R(.28,.5);CONES.push({x,y,w:s*2,dp:s*2,h:s*R(3.2,4.6),r:rand()*6,c:n01(mix([18,54,32],[34,84,44],rand())),y0:.14});
    box(CYL,x,y,.08,.08,.2,0,[.24,.17,.11],OUT);}
@@ -1428,11 +1435,16 @@ function tinYard(){
  // abandoned factory halls: rusting walls, dead windows, sawtooth roofs with collapsed teeth, smokestacks, water towers, trees on the roof
  const factory=(bu0,bu1,bv0,bv1)=>{const bw=bu1-bu0,bh=bv1-bv0,nu=Math.max(1,Math.round(bw/1.7)),nv=Math.max(1,Math.round(bh/1.9)),cu=(bw-.2)/nu,cv=(bh-.2)/nv;
   // halls packed in a grid across the block with narrow service gaps between them
-  for(let ga=0;ga<nu;ga++)for(let gb=0;gb<nv;gb++){if(rand()<.08)continue;
-   const hw=cu*R(.78,.94),hd=cv*R(.72,.92),uc=bu0+.1+(ga+.5)*cu+R(-.05,.05),hv=bv0+.1+(gb+.5)*cv+R(-.05,.05),hu0=uc-hw/2,[x,y]=toXY(uc,hv);
-   if(!ok(x,y)||!ok(...toXY(uc-hw/2,hv-hd/2))||!ok(...toXY(uc+hw/2,hv+hd/2))||!ok(...toXY(uc-hw/2,hv+hd/2))||!ok(...toXY(uc+hw/2,hv-hd/2)))continue;const h=R(1,2.3);
-   box(BODY,x,y,hw,hd,h,r,n01(mix(hx(pick(['#7a4a32','#5a4a40','#8a6a52','#4a4440','#9a5a3a'])),[20,20,24],.75)),id,0,{win:[.03,3,.42]});
-   const teeth=Math.max(3,Math.round(hw/.5));
+  for(let ga=0;ga<nu;ga++)for(let gb=0;gb<nv;gb++){if(rand()<.04)continue;
+   // halls fill nearly the whole cell; if they don't fit (edges, landmarks), a smaller one is squeezed in instead
+   let hw=cu*R(.86,.97),hd=cv*R(.84,.96);const uc=bu0+.1+(ga+.5)*cu+R(-.03,.03),hv=bv0+.1+(gb+.5)*cv+R(-.03,.03),[x,y]=toXY(uc,hv);
+   const fits=()=>ok(...toXY(uc-hw/2,hv-hd/2))&&ok(...toXY(uc+hw/2,hv+hd/2))&&ok(...toXY(uc-hw/2,hv+hd/2))&&ok(...toXY(uc+hw/2,hv-hd/2));
+   if(!ok(x,y))continue;if(!fits()){hw*=.65;hd*=.65;if(!fits())continue;}
+   // about a third become tall abandoned warehouses/tenements (flat roof, heavy cornice, the odd squatter's light)
+   const hu0=uc-hw/2,tall=rand()<.35,h=tall?R(2.4,4.2):R(1.3,2.6);
+   box(BODY,x,y,hw,hd,h,r,n01(mix(hx(pick(['#7a4a32','#5a4a40','#8a6a52','#4a4440','#9a5a3a'])),[20,20,24],.75)),id,0,{win:[tall?.06:.03,3,tall?.3:.42]});
+   if(tall)box(PROP,x,y,hw*1.03,hd*1.03,.09,r,[.24,.2,.18],id,h);
+   const teeth=tall?0:Math.max(3,Math.round(hw/.5));
    for(let q=0;q<teeth;q++){if(rand()<.25)continue;const [px,py]=toXY(hu0+(q+.5)*hw/teeth,hv);box(ROOF,px,py,hw/teeth,hd,.38,r,[.2,.17,.16],id,h);}
    if(rand()<.35){const [px,py]=toXY(hu0+hw*R(.15,.85),hv+hd*R(-.3,.3)),ch=R(.8,1.5),broken=rand()<.3;
     box(PROP,px,py,.5,.5,.35,r,[.36,.2,.15],id,h);box(CYL,px,py,.3,.3,broken?ch*.55:ch,0,[.44,.25,.18],id,h+.3);
@@ -1482,7 +1494,7 @@ function tinYard(){
   if(!inD(cx,cy)&&good===0)continue;
   if(!ok(cx,cy)||good<3){factory(bu0,bu1,bv0,bv1);continue;} // edge blocks: halls wherever they fit
   const h=hash(LU[ia]*31+7,LV[ib]*17+3),big=(bu1-bu0)*(bv1-bv0)>9;
-  const use=big?(h<.3?'mall':'factory'):(h<.72?'factory':h<.86?'market':'lot');
+  const use=big?(h<.2?'mall':'factory'):(h<.82?'factory':h<.91?'market':'lot');
   ({mall,factory,market,lot})[use](bu0,bu1,bv0,bv1);
   if(rand()<.35){const [px,py]=toXY(bu0-sw*.5+.05,R(bv0,bv1));barrel(px,py);}}}
 function gantry(cx,cy,nx,ny,did){const r=-Math.atan2(ny,nx),C=[.75,.22,.1],ux=-ny,uy=nx;
@@ -1921,7 +1933,7 @@ function updLabels(){for(const L of LABELS){let vis;
 // ---------------- CONTROLS ----------------
 const ptrs=new Map(),ray=new THREE.Raycaster(),ndc=new THREE.Vector2();let mode=null,moved=0,pinch0=0,mid0=null,hover=null,hoverDirty=false;
 function updCam(){const sp=Math.sin(phi);camera.position.set(target.x+radius*sp*Math.sin(theta),radius*Math.cos(phi),target.z+radius*sp*Math.cos(theta));camera.lookAt(target);}
-function pan(dx,dy){const k=radius*.0016,ct=Math.cos(theta),st=Math.sin(theta);target.x=clamp(target.x+(-dx*ct-dy*st)*k,-70,70);target.z=clamp(target.z+(dx*st-dy*ct)*k,-55,55);}
+function pan(dx,dy){const k=radius*.0016,ct=Math.cos(theta),st=Math.sin(theta);target.x=clamp(target.x+(-dx*ct-dy*st)*k,-95,70);target.z=clamp(target.z+(dx*st-dy*ct)*k,-72,55);}
 function pickAt(cx,cy){const r=el.getBoundingClientRect();ndc.set((cx-r.left)/r.width*2-1,-(cy-r.top)/r.height*2+1);ray.setFromCamera(ndc,camera);
  const h=ray.intersectObjects([bodyM,slab],false)[0];if(!h)return null;const mx=h.point.x+MW/2,my=h.point.z+MH/2;if(mx<0||my<0||mx>=MW||my>=MH)return null;
  if(h.object===slab&&!landAt(mx,my))return null;const d=distAt(mx,my);return d>=0?d:null;}
@@ -2002,6 +2014,40 @@ function loop(){requestAnimationFrame(loop);frame++;const t=clock.getElapsedTime
  if(beacMat)beacMat.opacity=.15+.85*Math.pow(.5+.5*Math.sin(t*2.6),8);
  updCam();if(hover&&hoverDirty&&frame%3===0&&!ptrs.size){hoverDirty=false;doHover();}
  render();updLabels();needle.style.transform=`rotate(${theta}rad)`;}
+
+// ---------------- QUALITY SETTINGS (Auto / Low / Medium / High) ----------------
+// Auto picks a level from the device and steps down if the frame rate stays under ~30 fps. ?quality=low|medium|high|auto in the URL forces a mode.
+const QL={low:{pr:1,bloom:false,refl:false,shadow:0,flakes:5000,mist:false},
+ medium:{pr:1.25,bloom:true,refl:true,shadow:1024,flakes:12000,mist:true},
+ high:{pr:1.75,bloom:true,refl:true,shadow:2048,flakes:26000,mist:true}};
+const LV=['low','medium','high'];
+const Q=(()=>{const touch=('ontouchstart' in window)||navigator.maxTouchPoints>0,small=Math.min(screen.width,screen.height)<=820,mem=navigator.deviceMemory||8;
+ const dev=touch&&small?'low':touch?'medium':mem<=4?'medium':'high',p=(new URLSearchParams(location.search).get('quality')||'').toLowerCase();
+ return{mode:LV.includes(p)?p:'auto',dev,cur:null,q:QL[dev],drops:0,acc:0,n:0,t0:performance.now(),last:performance.now(),warm:0};})();
+// toolbar button + small-screen toolbar styling
+const qBtn=document.createElement('button');qBtn.dataset.act='quality';qBtn.title='Graphics quality (click to change)';$('toolbar').appendChild(qBtn);
+{const st=document.createElement('style');st.textContent='@media (max-width:760px){#toolbar{left:10px;right:10px;transform:none;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}#toolbar::-webkit-scrollbar{display:none}#toolbar button{flex:none}}';document.head.appendChild(st);}
+// water reflections can be switched off: the sea then shows its own colour without the mirror pass
+const _renderRefl=renderRefl,BLACK=new THREE.DataTexture(new Uint8Array([0,0,0,255]),1,1,THREE.RGBAFormat);BLACK.needsUpdate=true;
+renderRefl=function(t){if(!water)return;const u=water.material.uniforms;if(Q.q.refl){if(REFL.rt)u.tR.value=REFL.rt.texture;_renderRefl(t);}else{u.t.value=t;u.tR.value=BLACK;}};
+function applyQuality(level){const q=QL[level];Q.cur=level;Q.q=q;
+ renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,q.pr));resize();
+ post.on=q.bloom;document.querySelector('#toolbar [data-act="glow"]').classList.toggle('on',post.on);
+ const sh=q.shadow>0;
+ if(sh!==renderer.shadowMap.enabled){renderer.shadowMap.enabled=sh;scene.traverse(o=>{const m=o.material;if(m)(Array.isArray(m)?m:[m]).forEach(x=>x.needsUpdate=true);});DN.applied=false;}
+ if(sh&&moon.shadow.mapSize.x!==q.shadow){moon.shadow.mapSize.set(q.shadow,q.shadow);if(moon.shadow.map){moon.shadow.map.dispose();moon.shadow.map=null;}}
+ renderer.shadowMap.needsUpdate=true;
+ qBtn.textContent='⚙ '+(Q.mode==='auto'?'Auto · '+level[0].toUpperCase()+level.slice(1):level[0].toUpperCase()+level.slice(1));}
+qBtn.addEventListener('click',()=>{const order=['auto','low','medium','high'];Q.mode=order[(order.indexOf(Q.mode)+1)%4];Q.drops=0;Q.warm=0;applyQuality(Q.mode==='auto'?Q.dev:Q.mode);});
+// per-frame: snowflake count, Greenway mist, and the Auto frame-rate watchdog
+FRAMEHOOKS.push(()=>{
+ if(SNW.pts)SNW.pts.geometry.setDrawRange(0,Q.q.flakes);
+ if(Q.mist===undefined){const g=scene.children.find(o=>o.isGroup&&o.children.some(c=>c.isPoints&&c.material.size===.32));Q.mist=g?g.children.filter(c=>c.isMesh):[];}
+ for(const m of Q.mist)m.visible=Q.q.mist;
+ const now=performance.now(),dt=now-Q.last;Q.last=now;if(Q.mode!=='auto'||document.hidden||dt>250)return;
+ if(++Q.warm<120)return;Q.acc+=dt;Q.n++;
+ if(Q.acc>4000){const fps=1000*Q.n/Q.acc;Q.acc=0;Q.n=0;const i=LV.indexOf(Q.cur);if(fps<30&&i>0&&Q.drops<2){Q.drops++;Q.warm=0;applyQuality(LV[i-1]);}}});
+applyQuality(Q.mode==='auto'?Q.dev:Q.mode);
 
 resize();
 setTimeout(()=>{buildMaps();assemble();buildLegend();buildLabels();infoDefault();drawOverlay();
