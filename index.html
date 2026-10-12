@@ -248,11 +248,12 @@ const LM=[
  {id:'mist',name:'The Mist Den',d:'slag',x:36,y:119,h:1.8,former:1,pin:3.2},
  {id:'dragon',name:"The Dragon's Mansion",d:'out',x:70,y:22,type:'dragon',ex:6.6,pin:3.2},
  // ver:'url' = only exists in the later (URL) version of the map
- {id:'landho',name:'Land Ho!',d:'piers',x:153.131707,y:150.314634,type:'landho',ex:.1,pin:3.2,ver:'url',note:'yachting club'},
+ {id:'landho',name:'Land Ho!',d:'piers',x:131.89,y:168.67,type:'landho',ex:.1,pin:3.2,ver:'url',note:'yachting club'},
  {id:'luckygem',name:'The Lucky Gem',d:'junction',x:87.8,y:89.2,type:'sapphire',ex:.1,pin:2,ver:'url'},
  {id:'highnote',name:'High Note',d:'sky',x:57.2,y:93.2,ex:.1,pin:2,ver:'url',note:'club'},
  // lvl = stands on a URL-only levelled site (LEVELS); ex:0 = clears nothing at load, so the CIV city is untouched
- {id:'venere',name:'Villa de Venere',d:'out',x:113.4,y:34.7,ex:0,pin:3.2,ver:'url',note:'club',lvl:1}];
+ {id:'venere',name:'Villa de Venere',d:'out',x:113.4,y:34.7,ex:0,pin:3.2,ver:'url',note:'club',lvl:1},
+ {id:'nest',name:'The Saphyre Nest',d:'piers',x:153.44,y:145.42,ex:0,pin:3.2,ver:'url',note:'resort'}];
 const LMXY=id=>{const l=LM.find(q=>q.id===id);return[l.x,l.y];},APT=LM.find(l=>l.id==='airport'),AP=(dx,dy)=>[APT.x+dx,APT.y+dy];
 // The Underpark (URL): Tin Yard, on its northern side toward Slag Town — placed clear of the Kennels and the Unveiling
 (()=>{const g=id=>LM.find(l=>l.id===id),kn=g('kennels'),un=g('unveiling'),mi=g('mist');if(!kn||!un||!mi)return;
@@ -914,6 +915,7 @@ function lmBuild(l){const d=D[ID[l.d]],did=ID[l.d],x=l.x,y=l.y;let top=l.h||2;(w
  case 'glitchgarden':{versioned('url',()=>{top=glitchGarden(x,y,did);});break;}
  case 'bedtime':{versioned('url',()=>{top=bedTime(l,did);});break;}
  case 'venere':{versioned('url',()=>{top=villaVenere(l,did);});break;}
+ case 'nest':{versioned('url',()=>{top=saphyreNest(l,did);});break;}
  case 'lion':{const C=[.78,.72,.6],RF=[.22,.24,.28],GLD=[1,.78,.3],IRON=[.08,.08,.09],HEDGE=[.1,.28,.13],X1=x-6,X2=x+6,Y1=y-4.2,Y2=y+6.2,MY=y-1.2;
   // wrought-iron fence: two rails, close-set bars, cream stone pillars with lamps every few metres
   const fence=(ax,ay,bx,by)=>{const L=Math.hypot(bx-ax,by-ay),r=-Math.atan2(by-ay,bx-ax),mx=(ax+bx)/2,my=(ay+by)/2;
@@ -1261,15 +1263,15 @@ function pickW(arr,h){let t=0;for(const a of arr)t+=a[1];let x=h*t;for(const a o
 function paintCity(){
  // boats, ships and jetties out on the water shouldn't light up at night: dark night colours, dimmer neon trim and lamps
  for(const L of [BODY,PROP,CYL,ROOF])L.forEach(b=>{if(!b.pal&&!landAt(b.x,b.y)){b.pal=b.c.slice();b.pn=b.c.map(v=>v*.2);}});
- NEON.forEach(b=>{if(!landAt(b.x,b.y))b.c=b.c.map(v=>v*.4);});
+ NEON.forEach(b=>{if(!landAt(b.x,b.y)&&!b.lmk)b.c=b.c.map(v=>v*.4);});
  if(DN.lamps){const pa=DN.lamps.geometry.attributes.position,ca=DN.lamps.geometry.attributes.color;
-  for(let i=0;i<pa.count;i++)if(!landAt(pa.getX(i)+MW/2,pa.getZ(i)+MH/2))ca.setXYZ(i,ca.getX(i)*.45,ca.getY(i)*.45,ca.getZ(i)*.45);ca.needsUpdate=true;}
+  for(let i=0;i<pa.count;i++)if(!landAt(pa.getX(i)+MW/2,pa.getZ(i)+MH/2)&&!(LAMPS[i]&&LAMPS[i].lmk))ca.setXYZ(i,ca.getX(i)*.45,ca.getY(i)*.45,ca.getZ(i)*.45);ca.needsUpdate=true;}
  const nm=[];Object.values(CHM).forEach(m=>nm.push([m,m.color.clone()]));
  scene.children.forEach(o=>{if(o.isInstancedMesh&&(o.userData.list===HULL||o.userData.list===SAIL))nm.push([o.material,o.material.color.clone()]);});
  VHOOKS.push(e=>nm.forEach(([m,c])=>m.color.copy(c).multiplyScalar(.25+.75*e)));
  // landmarks keep their hand-picked colours unless they have a material override here
  const LMP={menagerie:{c:['#7d756a','#8a8174','#6f685e','#958b7c'],r:['#3a3e46','#30343b','#41454c'],s:5,g:.45}};
- const lmAt=b=>{if(b.lvl)return LM.find(l=>l.lvl===b.lvl)||null; // parts of a landmark on a levelled site (Villa de Venere)
+ const lmAt=b=>{if(b.lmk)return b.lmk;if(b.lvl)return LM.find(l=>l.lvl===b.lvl)||null; // parts of a landmark on a levelled site (Villa de Venere)
   for(let i=0;i<LM.length;i++){const l=LM[i];if(Math.hypot(b.x-l.x,b.y-l.y)<EXC[i].r+.25)return l;}return null;};
  const A=new Float32Array(Math.max(1,BODY.length)*3);
  BODY.forEach((b,i)=>{const d=D[b.did];if(!d||!landAt(b.x,b.y))return;const l=lmAt(b);let P=PAL[d.key];
@@ -1284,6 +1286,7 @@ function paintCity(){
  CYL.forEach(b=>{const l=lmAt(b);if(l&&l.id==='menagerie'&&b.w>.5){b.pal=n01(hx('#857c70'));b.pn=b.pal.map(v=>v*.2);}});
  // Villa de Venere: its stucco and red tile keep their own colours by day, the same as its hip-roof ends (which never take a day palette)
  for(const L of [BODY,ROOF])L.forEach(b=>{if(b.lvl&&!b.pal){b.pal=b.c.slice();b.pn=b.c.slice();}});
+ for(const L of [BODY,PROP,ROOF,CYL])L.forEach(b=>{if(b.lmk){b.pal=b.c.slice();b.pn=b.c.slice();}}); // landmarks built over the water (The Saphyre Nest)
  // slate / tile texture on every pitched roof: staggered courses with gaps, per-tile tone variation
  const rm=DIMS[2][0].material;
  rm.onBeforeCompile=s=>{
@@ -2062,6 +2065,185 @@ function villaRim(hU,free,V,T){const vr=mulberry(1953710),VR=(a,b)=>a+(b-a)*vr()
  for(let q=0,n=0;q<500&&n<16;q++){const x=VR(V.x0-V.m2,V.x1+V.m2),y=VR(V.y0-V.m2,V.y1+V.m2);if(!free(x,y)||segDist(x,y,gx,gy,rx,ry)<1)continue;n++;const h=hU(x,y);
   if(vr()<.6){const t=VR(.9,1.2),w=VR(.9,1.25);box(CYL,x,y,.07,.07,t,0,[.42,.3,.2],OUT,h);TREES.push({x,y,w,dp:w*VR(.85,1),h:.3,r:vr()*6,c:[.2,.36,.2].map(v=>v*VR(.9,1.1)),did:OUT,y0:h+t-.08});}
   else for(const o of [-.18,.18])TREES.push({x:x+o,y:y+VR(-.1,.1),w:.24,dp:.24,h:VR(.9,1.15),r:vr()*6,c:[.09,.25,.13],did:OUT,y0:h+.03});}}
+// ---------------- THE SAPHYRE NEST (URL) — a luxury resort on its own island off the Piers ----------------
+// After the reference: at its heart a sapphire-glass orb cradled in a woven white nest on a round glass atrium; five long stepped white
+// hotel wings radiating from it, and a curved lobby under shell roofs facing the city. Around them gardens, a lagoon pool and infinity pools,
+// a row of villas, a wooden beach restaurant, a crescent beach in the south bay and a long strand on the east, held by rock arms
+// (a lighthouse on the southern spit, beach cabanas on the eastern breakwater), and a marina between the island and the shore.
+// The island is a mesh over the water with its plan painted on top (URL only). It draws from its own random stream.
+function saphyreNest(l,did){
+ // a runs offshore from the shore root R0, b runs sideways (+ toward the Fingers)
+ const vr=mulberry(5151977),VR=(a,b)=>a+(b-a)*vr(),R0=[149,142.5],F=[.6,.8],SV=[.8,-.6],G=.14,
+  W=(a,b)=>[R0[0]+F[0]*a+SV[0]*b,R0[1]+F[1]*a+SV[1]*b],toL=(x,y)=>{const dx=x-R0[0],dy=y-R0[1];return[dx*F[0]+dy*F[1],dx*SV[0]+dy*SV[1]];},
+  dirR=t=>-Math.atan2(F[1]*Math.cos(t)+SV[1]*Math.sin(t),F[0]*Math.cos(t)+SV[0]*Math.sin(t)),
+  WH=[.93,.93,.91],WB=[.97,.97,.96],ROCK=[.42,.4,.37],WOOD=[.52,.36,.22],POOL=[.3,.78,.95],GOLD=[1,.82,.5],CYAN=[.45,.85,1],SAPH=[.35,.55,1];
+ // ---- the plan (a,b)
+ const ISL=[[-2.4,-6],[-2.5,-5],[-2.45,-4],[-2.45,-3],[-2,-2],[-1.55,-1],[-1.45,0],[-1.45,1],[-1.3,2],[-1.3,3],[-1.25,4],[-.8,5],[-.3,6],[.45,7],[.9,8],
+  [1.6,8.9],[3.2,9.7],[6,9.9],[7.7,10],[11.9,13.2],[12.5,13.4],[12.9,13],[12.7,12.5],[8.8,9.2],
+  [10.2,8.4],[12.3,6.6],[13.7,4.2],[14.7,1.6],[16,-.6],[17,-1.6],[16.4,-1.75],[13.2,-.35],
+  [11.8,0],[10.9,-1.6],[10.5,-3.4],[10.8,-5.1],[11.8,-6],[13.4,-6.5],[13.2,-7.1],[12.4,-7.3],[10,-7.3],[7,-7],[4.4,-6.7],[1.6,-6.5],[-.6,-6.4]],
+  NBACK=15, // the first 15 points follow the shore (the island's root on land)
+  MBW=[[.4,-13.5],[6.4,-13.5],[7.5,-12.6],[8,-11.3],[7.7,-10.5],[7.2,-10.8],[7.3,-11.5],[6.6,-12.6],[.4,-12.7]], // marina breakwater
+  SB=[[12.6,.8],[11.7,-1.6],[11.3,-3.4],[11.6,-5.2],[12.2,-6.2],[10.9,-6],[9.6,-5.2],[9.2,-3.4],[9.6,-1.6],[10.5,-.1],[11.4,.8]], // south beach
+  EB=[[9.6,9.3],[11,8.4],[13,6.9],[14.5,4.5],[15.6,1.8],[16.9,-.4],[17.6,-1.4],[16.6,-1.2],[15.2,-.2],[13.9,1],[12.8,3.4],[11.6,5.5],[10,7],[9,8.3]], // east strand
+  LAG=[[6.6,-3.4,.75],[7.4,-4,.9],[8,-3.2,.55]],HPOOL=[[2.3,-2.9,.7],[2.9,-3.4,.5]], // lagoon pool, a pool by the lobby
+  RPOOL=[[10,1,1.5,.55,.5],[9.2,2.1,1,.45,.3],[9.3,6.5,.8,.42,-.5],[10.1,5.9,.6,.38,-.5]], // infinity pools: a,b,length,width,angle
+  PATHS=[[[7.4,.4],[9,.2],[10.4,-.3],[11.6,.1],[13.2,-.25],[16.3,-1.45]],[[5.9,-.6],[6.7,-2.2],[7.3,-2.6]],[[1,-5],[3.5,-5.15],[6,-5.1],[8.4,-5.25],[9.2,-4.9]],
+   [[.6,1],[.4,-2],[.9,-4.7]],[[5.2,4.4],[5.4,6.6],[5.9,8.8],[8.2,9.6],[12.4,12.9]],[[7,3.4],[8.4,4.6],[9.6,5.4]],[[.6,2.6],[1.2,5.2],[2.6,8.2]]],
+  H=[5,1.8],DECK=[9.2,-4.7,1];
+ const inP=(P,a,b)=>{let c=false;for(let i=0,j=P.length-1;i<P.length;j=i++){const [ai,bi]=P[i],[aj,bj]=P[j];if((bi>b)!==(bj>b)&&a<(aj-ai)*(b-bi)/(bj-bi)+ai)c=!c;}return c;},
+  edgeD=(P,a,b,from)=>{let m=1e9;for(let i=from||0;i<P.length;i++){const p=P[i],q=P[(i+1)%P.length];m=Math.min(m,segDist(a,b,p[0],p[1],q[0],q[1]));}return m;};
+ // ---- whatever stood here before (jetties, moored boats, Land Ho!'s old spot, buildings at the root) only exists in CIV
+ civOnlyArea((x,y)=>{const [a,b]=toL(x,y);if(a<-3.4||a>18||b<-14.3||b>14)return false;
+  return inP(ISL,a,b)||edgeD(ISL,a,b)<.8||inP(MBW,a,b)||(a>-1.2&&b<-6&&b>-14)||!landAt(x,y);});
+ const n0=VER.lists.map(L=>L.length),c0=scene.children.length;
+ const B=(L,a,b,w,dp,h,t,c,y0,ex)=>{const [x,y]=W(a,b);return box(L,x,y,w,dp,h,dirR(t||0),c,did,y0,ex);},
+  seg=(L,p,q,wd,h,c,y0,ex,ext)=>{const t=Math.atan2(q[1]-p[1],q[0]-p[0]),len=Math.hypot(q[0]-p[0],q[1]-p[1])+(ext||0)*2;return B(L,(p[0]+q[0])/2,(p[1]+q[1])/2,len,wd,h,t,c,y0,ex);},
+  lamp=(a,b,h,c)=>{const [x,y]=W(a,b);LAMPS.push({x,y,h,c});},
+  tree=(a,b,w,h,c,y0)=>{const [x,y]=W(a,b);TREES.push({x,y,w,dp:w,h,r:vr()*6,c,did,y0});},
+  palm=(a,b,h)=>{B(CYL,a,b,.045,.045,h,0,[.42,.32,.22],G);tree(a,b,VR(.55,.7),.16,[.14,.46,.2].map(v=>v*VR(.85,1.15)),G+h);};
+
+ // ---- the painted plan on the island's top (and its night glow): rock edges, gardens, sand, paths, plazas, pools, decks
+ const A0=-3,A1=18.5,B0=-14.5,B1=14,K=44,CW=Math.round((A1-A0)*K),CH=Math.round((B1-B0)*K),X=a=>(a-A0)*K,Y=b=>(b-B0)*K;
+ const cv=document.createElement('canvas');cv.width=CW;cv.height=CH;const g=cv.getContext('2d'),ev=document.createElement('canvas');ev.width=CW;ev.height=CH;const e=ev.getContext('2d');
+ e.fillStyle='#000';e.fillRect(0,0,CW,CH);
+ const path=(c,P)=>{const n=P.length,m=i=>[(P[i%n][0]+P[(i+1)%n][0])/2,(P[i%n][1]+P[(i+1)%n][1])/2];c.beginPath();const s0=m(n-1);c.moveTo(X(s0[0]),Y(s0[1]));
+  for(let i=0;i<n;i++){const q=m(i);c.quadraticCurveTo(X(P[i][0]),Y(P[i][1]),X(q[0]),Y(q[1]));}c.closePath();};
+ const line=(c,P,w,col)=>{c.strokeStyle=col;c.lineWidth=w*K;c.lineCap=c.lineJoin='round';c.beginPath();P.forEach((p,i)=>i?c.lineTo(X(p[0]),Y(p[1])):c.moveTo(X(p[0]),Y(p[1])));c.stroke();};
+ const disc=(c,a,b,r,col)=>{c.fillStyle=col;c.beginPath();c.arc(X(a),Y(b),r*K,0,7);c.fill();};
+ const rockPat=(()=>{const c=document.createElement('canvas');c.width=c.height=64;const q=c.getContext('2d');q.fillStyle='#5f5b55';q.fillRect(0,0,64,64);
+  for(let i=0;i<70;i++){const v=70+hash(i,3)*70|0;q.fillStyle=`rgb(${v},${v-3|0},${v-8|0})`;q.beginPath();q.arc(hash(i,5)*64,hash(i,7)*64,2+hash(i,9)*5,0,7);q.fill();}return g.createPattern(c,'repeat');})();
+ for(const P of [ISL,MBW]){path(g,P);g.fillStyle=rockPat;g.fill();}
+ g.save();path(g,ISL);g.clip();
+ g.fillStyle='#3d6a37';g.fillRect(0,0,CW,CH);
+ for(let i=0;i<900;i++){const a=VR(A0,A1),b=VR(B0,B1);g.fillStyle=`rgba(${vr()<.5?'20,50,22':'90,130,70'},${VR(.15,.35)})`;g.beginPath();g.arc(X(a),Y(b),VR(.15,.5)*K,0,7);g.fill();}
+ path(g,ISL);g.strokeStyle=rockPat;g.lineWidth=.9*K;g.stroke();
+ for(const P of [SB,EB]){path(g,P);g.fillStyle='#e9dbb6';g.fill();}
+ for(let i=0;i<1400;i++){const a=VR(8,18),b=VR(-7,10);if(!inP(SB,a,b)&&!inP(EB,a,b))continue;g.fillStyle=`rgba(${vr()<.5?'255,250,235':'200,180,140'},.35)`;g.fillRect(X(a),Y(b),2,2);}
+ // entrance drive and drop-off plaza on the city side, the plaza round the atrium, garden paths, the walkway out along the eastern breakwater
+ line(g,[[-2.6,1.8],[1.6,1.8]],.9,'#cfc8b8');disc(g,.4,1.8,.95,'#d8d1c1');disc(g,H[0],H[1],2.75,'#ddd6c8');
+ g.strokeStyle='rgba(150,140,120,.6)';g.lineWidth=2;for(const r of [2.2,2.55]){g.beginPath();g.arc(X(H[0]),Y(H[1]),r*K,0,7);g.stroke();}
+ for(const P of PATHS)line(g,P,.3,'#d9d2c2');
+ // lagoon pool with its terrace, the pool by the lobby, infinity pools; the restaurant's wooden deck
+ for(const set of [LAG,HPOOL])for(const [a,b,r] of set)disc(g,a,b,r+.28,'#e3dccd');
+ for(const set of [LAG,HPOOL])for(const [a,b,r] of set){disc(g,a,b,r,'#2fb4d4');disc(g,a+.05,b-.05,r*.6,'#55cde6');disc(e,a,b,r,'rgba(60,200,255,.85)');}
+ for(const [a,b,L,w,t] of RPOOL)for(const [c,col,pad] of [[g,'#e3dccd',.22],[g,'#2aa9cf',0],[e,'rgba(60,200,255,.85)',0]]){
+  c.save();c.translate(X(a),Y(b));c.rotate(t);c.fillStyle=col;c.fillRect(-(L/2+pad)*K,-(w/2+pad)*K,(L+2*pad)*K,(w+2*pad)*K);c.restore();}
+ disc(g,DECK[0],DECK[1],DECK[2],'#8a6440');g.strokeStyle='rgba(60,40,20,.5)';g.lineWidth=1;for(let k=-1;k<=1;k+=.12){g.beginPath();g.moveTo(X(DECK[0]+k),Y(DECK[1]-1));g.lineTo(X(DECK[0]+k),Y(DECK[1]+1));g.stroke();}
+ g.restore();
+ // night: warm path lights and plazas
+ for(const P of PATHS)line(e,P,.12,'rgba(255,190,120,.35)');line(e,[[-2.6,1.8],[1.6,1.8]],.3,'rgba(255,200,140,.3)');
+ e.fillStyle='rgba(255,200,150,.22)';e.beginPath();e.arc(X(H[0]),Y(H[1]),2.75*K,0,7);e.fill();
+ // ---- the island and the marina breakwater: meshes over the water, plan on top, rock sides
+ const tex=new THREE.CanvasTexture(cv),etex=new THREE.CanvasTexture(ev);tex.anisotropy=renderer.capabilities.getMaxAnisotropy();
+ const topM=new THREE.MeshLambertMaterial({map:tex,emissive:0xffffff,emissiveMap:etex,emissiveIntensity:1}),sideM=new THREE.MeshLambertMaterial({color:0x5c5852});
+ VHOOKS.push(k=>topM.emissiveIntensity=1-.95*k);
+ const shapeOf=P=>{const sh=new THREE.Shape(),n=P.length,m=i=>[(P[i%n][0]+P[(i+1)%n][0])/2,(P[i%n][1]+P[(i+1)%n][1])/2],q0=m(n-1);sh.moveTo(q0[0],q0[1]);
+  for(let i=0;i<n;i++){const q=m(i);sh.quadraticCurveTo(P[i][0],P[i][1],q[0],q[1]);}return sh;};
+ for(const P of [ISL,MBW]){const geo=new THREE.ExtrudeGeometry(shapeOf(P),{depth:.5,bevelEnabled:false,curveSegments:10}),pos=geo.attributes.position,uv=geo.attributes.uv;
+  for(let i=0;i<pos.count;i++){const a=pos.getX(i),b=pos.getY(i),z=pos.getZ(i),[x,y]=W(a,b);uv.setXY(i,(a-A0)/(A1-A0),1-(b-B0)/(B1-B0));pos.setXYZ(i,x-MW/2,G-.5+z,y-MH/2);}
+  geo.computeVertexNormals();const m=new THREE.Mesh(geo,[topM,sideM]);m.receiveShadow=true;scene.add(m);}
+ // boulders along every rock edge (the beaches and the root on land excepted)
+ const rockEdge=(P,from)=>{for(let i=from;i<P.length;i++){const p=P[i],q=P[(i+1)%P.length],L=Math.hypot(q[0]-p[0],q[1]-p[1]);if(i===P.length-1&&from)break;
+  for(let t=0;t<L;t+=.22){const a=p[0]+(q[0]-p[0])*t/L,b=p[1]+(q[1]-p[1])*t/L;if(inP(SB,a,b)||inP(EB,a,b))continue;
+   const v=VR(.34,.5);B(PROP,a+VR(-.08,.08),b+VR(-.08,.08),VR(.18,.34),VR(.15,.3),VR(.1,.2),vr()*6,[v,v*.97,v*.92],G-.16);}}};
+ rockEdge(ISL,NBACK);rockEdge(MBW,0);
+
+ // ---- the heart: round atrium (white colonnade over a glowing glass band), the sapphire orb in its woven white nest
+ const [hx,hy]=W(H[0],H[1]);
+ box(CYL,hx,hy,4.2,4.2,.95,0,WH,did,G);NCYL.push({x:hx,y:hy,w:4.24,dp:4.24,h:.5,r:0,c:SAPH.map(v=>v*.6),did,y0:G+.2});
+ for(let k=0;k<20;k++){const t=k/20*6.283;box(CYL,hx+Math.cos(t)*2.13,hy+Math.sin(t)*2.13,.1,.1,.95,0,WB,did,G);}
+ box(CYL,hx,hy,4.6,4.6,.1,0,WB,did,G+.95);
+ const OR=1.3,OY=G+1.05+1.05;
+ {const c=document.createElement('canvas');c.width=1024;c.height=512;const q=c.getContext('2d');q.fillStyle='#03081a';q.fillRect(0,0,1024,512);
+  // geodesic facets: a triangle lattice with brighter edges and a few lit panes
+  for(let j=0;j<12;j++)for(let i=0;i<32;i++){const x0=i*32+(j%2)*16,y0=j*42.7;const lit=hash(i,j*7);
+   q.fillStyle=`rgba(${40+lit*80|0},${80+lit*110|0},255,${.25+lit*.5})`;q.beginPath();q.moveTo(x0,y0);q.lineTo(x0+32,y0);q.lineTo(x0+16,y0+42.7);q.closePath();q.fill();}
+  q.strokeStyle='rgba(170,210,255,.95)';q.lineWidth=2.5;for(let j=0;j<=12;j++){q.beginPath();q.moveTo(0,j*42.7);q.lineTo(1024,j*42.7);q.stroke();}
+  for(let i=-16;i<48;i++){q.beginPath();q.moveTo(i*32,0);q.lineTo(i*32+192,512);q.stroke();q.beginPath();q.moveTo(i*32+192,0);q.lineTo(i*32,512);q.stroke();}
+  const t=new THREE.CanvasTexture(c),om=new THREE.MeshLambertMaterial({color:0x1d3a8a,emissive:0xffffff,emissiveMap:t,emissiveIntensity:.95});
+  const orb=new THREE.Mesh(new THREE.SphereGeometry(OR,48,32),om);orb.position.set(hx-MW/2,OY,hy-MH/2);orb.castShadow=true;scene.add(orb);
+  const cN=new THREE.Color(0x1d3a8a),cD=new THREE.Color(0x4a78d8);VHOOKS.push(k=>{om.color.copy(cN).lerp(cD,k);om.emissiveIntensity=.95-.6*k;});}
+ {// the nest: a woven white bowl (crossing slats, open between) cradling the orb
+  const c=document.createElement('canvas');c.width=512;c.height=128;const q=c.getContext('2d');q.strokeStyle='#fff';q.lineWidth=9;
+  for(let i=-8;i<40;i++){q.beginPath();q.moveTo(i*16,128);q.lineTo(i*16+64,0);q.stroke();q.beginPath();q.moveTo(i*16+64,128);q.lineTo(i*16,0);q.stroke();}
+  q.lineWidth=14;q.beginPath();q.moveTo(0,4);q.lineTo(512,4);q.stroke();
+  const t=new THREE.CanvasTexture(c);t.wrapS=THREE.RepeatWrapping;t.repeat.set(3,1);
+  const pr=[[1.02,0],[1.2,.22],[1.38,.48],[1.5,.75],[1.56,.95]].map(p=>new THREE.Vector2(p[0],p[1]));
+  const bowl=new THREE.Mesh(new THREE.LatheGeometry(pr,64),new THREE.MeshLambertMaterial({color:0xf2f0ea,map:t,alphaTest:.5,transparent:false,side:THREE.DoubleSide}));
+  bowl.position.set(hx-MW/2,G+1.05,hy-MH/2);bowl.castShadow=true;scene.add(bowl);}
+ LAMPS.push({x:hx,y:hy,h:OY,c:SAPH},{x:hx,y:hy,h:OY+.9,c:[.6,.75,1]});
+
+ // ---- five long hotel wings radiating from the heart: stepped down toward their tips, white balcony bands on every floor,
+ // planted terraces on each step, the top floors running on past the end as a cantilevered crown
+ const polar=(r,t)=>[H[0]+r*Math.cos(t),H[1]+r*Math.sin(t)],BW=.95,BEND=14*Math.PI/180;
+ [[112,2.8],[58,2.8],[20,2.4],[-42,2.4],[-95,2.3]].forEach(([deg,Lo])=>{const t=deg*Math.PI/180,p0=polar(1.85,t),p1=polar(3.6,t),t2=t+BEND,p2=[p1[0]+Lo*Math.cos(t2),p1[1]+Lo*Math.sin(t2)];
+  const parts=[[p0,p1,4.4]];for(let k=0;k<3;k++){const u0=k/3,u1=(k+1)/3;parts.push([[p1[0]+(p2[0]-p1[0])*u0,p1[1]+(p2[1]-p1[1])*u0],[p1[0]+(p2[0]-p1[0])*u1,p1[1]+(p2[1]-p1[1])*u1],[3.8,3.1,2.4][k]]);}
+  const tip=[p2[0]+.9*Math.cos(t2),p2[1]+.9*Math.sin(t2)],back=[p2[0]-.7*Math.cos(t2),p2[1]-.7*Math.sin(t2)];
+  parts.push([back,tip,1.02,G+1.72]);
+  parts.forEach(([q0,q1,h,yb])=>{const y0=yb||G,tt=Math.atan2(q1[1]-q0[1],q1[0]-q0[0]),nx=-Math.sin(tt),ny=Math.cos(tt);
+   seg(BODY,q0,q1,BW,h,WH,y0,{win:[.72,1,.34]},.24);
+   for(let f=.34;f<h-.05;f+=.34)seg(PROP,q0,q1,BW+.1,.045,WB,y0+f-.02,0,.26);
+   seg(PROP,q0,q1,BW+.16,.08,WB,y0+h,0,.3);
+   for(const sd of [-1,1])seg(PROP,[q0[0]+nx*sd*(BW/2-.02),q0[1]+ny*sd*(BW/2-.02)],[q1[0]+nx*sd*(BW/2-.02),q1[1]+ny*sd*(BW/2-.02)],.1,.09,[.2,.42,.2],y0+h+.08);
+   lamp((q0[0]+q1[0])/2+nx*.62,(q0[1]+q1[1])/2+ny*.62,G+.25,GOLD);});
+  lamp(tip[0],tip[1],G+1.65,[1,.85,.65]);});
+
+ // ---- the lobby: a curved wing on the city side under two sweeping white shell roofs, the name over the drop-off
+ for(let d=150;d<232;d+=8){seg(BODY,polar(3.2,d*Math.PI/180),polar(3.2,(d+8)*Math.PI/180),1.1,.85,WH,G,{win:[.8,0,.4]},.05);}
+ {const sm=new THREE.MeshLambertMaterial({color:0xf4f3ef,side:THREE.DoubleSide});
+  for(const [d,sx,sz] of [[172,1.7,1.25],[210,1.55,1.15]]){const tt=d*Math.PI/180,[ca,cb]=polar(3.3,tt),[x,y]=W(ca,cb),
+    sh=new THREE.Mesh(new THREE.SphereGeometry(1,28,10,0,Math.PI,0,Math.PI/2),sm);
+   sh.scale.set(sx,.75,sz);sh.position.set(x-MW/2,G+.8,y-MH/2);sh.rotation.y=dirR(tt)+Math.PI/2;sh.castShadow=true;scene.add(sh);}}
+ const NAME=g2=>{const T='THE SAPHYRE NEST';let fs=58;const f=v=>`600 ${v}px "Didot","Bodoni 72",Georgia,"Times New Roman",serif`;g2.font=f(fs);
+  while(g2.measureText(T).width>470&&fs>18){fs-=2;g2.font=f(fs);}g2.textAlign='center';g2.textBaseline='middle';
+  g2.shadowColor='#3d7bff';g2.shadowBlur=24;g2.fillStyle='#9cc2ff';g2.fillText(T,256,66);g2.shadowBlur=4;g2.fillStyle='#f4f8ff';g2.fillText(T,256,66);};
+ {const [x,y]=W(1.35,1.8);sign(NAME,x,y,G+1.25,2.5,Math.atan2(-F[0],-F[1]),'');}
+ {const [x,y]=W(H[0]+2.3,H[1]-.3);sign(NAME,x,y,G+.62,1.5,Math.atan2(F[0],F[1]),'');}
+ for(const sd of [-1,1])lamp(.4,1.8+sd*.7,G+.45,GOLD);
+
+ // ---- the restaurant: a Y of curved wooden roofs on slender posts over its deck, between the lagoon and the beach
+ for(const t0 of [-1.4,.7,2.8])for(let k=0;k<9;k++){const u=k*.14,t=t0+u*.45,a=DECK[0]+Math.cos(t)*u,b=DECK[1]+Math.sin(t)*u;
+  B(PROP,a,b,.2,.62,.05,t,WOOD,G+.62);if(k===3||k===7)B(CYL,a,b,.04,.04,.62,0,[.3,.22,.15],G);if(k===5)lamp(a,b,G+.5,[1,.75,.45]);}
+ // ---- villas along the south-west arm: white cubes, flat roofs, a plunge pool each on the sea side, a palm
+ for(let k=0;k<7;k++){const a=2+k*1.05,b=-5.75;B(BODY,a,b,.7,.46,.34,0,WH,G,{win:[.7,0,.3]});B(PROP,a,b,.8,.56,.04,0,WB,G+.34);
+  B(NEON,a,b-.42,.34,.2,.012,0,POOL,G+.01);palm(a+.45,b+.32,VR(.6,.8));lamp(a-.2,b+.3,G+.18,[1,.8,.5]);}
+ // ---- pools: lights round the lagoon and along the infinity pools
+ for(const [a,b,r] of LAG)for(let k=0;k<5;k++){const t=k/5*6.283+r;lamp(a+Math.cos(t)*(r+.18),b+Math.sin(t)*(r+.18),G+.12,CYAN);}
+ for(const [a,b,L,w,t] of RPOOL)for(const sd of [-1,1])lamp(a+Math.cos(t)*sd*L*.4,b+Math.sin(t)*sd*L*.4,G+.1,CYAN);
+ // ---- beaches: rows of white parasols with pairs of loungers, torches along the top of the sand
+ for(const P of [SB,EB])for(let a=8.4;a<17.5;a+=.62)for(let b=-6.6;b<10;b+=.58){const pa=a+VR(-.1,.1),pb=b+VR(-.1,.1);
+  if(!inP(P,pa,pb)||!inP(ISL,pa,pb)||edgeD(ISL,pa,pb)<.4||Math.hypot(pa-DECK[0],pb-DECK[1])<DECK[2]+.3||vr()<.25)continue;
+  B(CYL,pa,pb,.025,.025,.3,0,[.85,.85,.85],G);B(CYL,pa,pb,.34,.34,.035,0,WB,G+.3);for(const sd of [-1,1])B(PROP,pa+.08,pb+sd*.09,.22,.07,.03,0,WB,G);}
+ for(const P of [[[9.6,-1.6],[9.2,-3.4],[9.6,-5.2]],[[10,7],[11.6,5.5],[12.8,3.4],[13.9,1]]])P.forEach(p=>lamp(p[0]-.15,p[1],G+.35,[1,.6,.25]));
+ // ---- gardens: palms and flowering trees wherever the plan is open ground
+ const wingD=(a,b)=>{let m=1e9;for(const [deg,Lo] of [[112,2.8],[58,2.8],[20,2.4],[-42,2.4],[-95,2.3]]){const t=deg*Math.PI/180,p0=polar(1.85,t),p1=polar(3.6,t),t2=t+BEND,
+   p2=[p1[0]+(Lo+.9)*Math.cos(t2),p1[1]+(Lo+.9)*Math.sin(t2)];m=Math.min(m,segDist(a,b,p0[0],p0[1],p1[0],p1[1]),segDist(a,b,p1[0],p1[1],p2[0],p2[1]));}return m;};
+ const open=(a,b)=>inP(ISL,a,b)&&edgeD(ISL,a,b)>.6&&!inP(SB,a,b)&&!inP(EB,a,b)&&a>.8&&Math.hypot(a-H[0],b-H[1])>2.9&&wingD(a,b)>.75&&
+  !(Math.hypot(a-H[0],b-H[1])<4.2&&Math.atan2(b-H[1],a-H[0])*180/Math.PI>140)&&!(Math.hypot(a-H[0],b-H[1])<4.2&&Math.atan2(b-H[1],a-H[0])*180/Math.PI<-128)&&
+  ![...LAG,...HPOOL].some(([pa,pb,r])=>Math.hypot(a-pa,b-pb)<r+.35)&&!RPOOL.some(([pa,pb,L])=>Math.hypot(a-pa,b-pb)<L*.55+.2)&&Math.hypot(a-DECK[0],b-DECK[1])>DECK[2]+.2&&
+  !(b<-5.2&&a<9)&&!PATHS.some(P=>P.some((p,i)=>i&&segDist(a,b,P[i-1][0],P[i-1][1],p[0],p[1])<.28))&&a<13.5;
+ for(let q=0,n=0;q<6000&&n<230;q++){const a=VR(.8,13.5),b=VR(-5.6,9.6);if(!open(a,b))continue;n++;
+  if(vr()<.62)palm(a,b,VR(.65,1.05));else tree(a,b,VR(.38,.62),VR(.32,.5),vr()<.25?[.55,.2,.35]:[.16,.38,.18].map(v=>v*VR(.85,1.2)),G+.02);}
+ // ---- path lamps
+ for(const P of PATHS)for(let i=1;i<P.length;i++){const [a0,b0]=P[i-1],[a1,b1]=P[i],L=Math.hypot(a1-a0,b1-b0);for(let t=.4;t<L;t+=.9)lamp(a0+(a1-a0)*t/L+.18,b0+(b1-b0)*t/L,G+.3,[1,.82,.55]);}
+ // ---- the eastern breakwater: beach cabanas along its walkway; the southern spit: a small white lighthouse at its tip
+ {const p=[8.6,9.9],q=[12.1,12.65],L=Math.hypot(q[0]-p[0],q[1]-p[1]),t=Math.atan2(q[1]-p[1],q[0]-p[0]),nx=-Math.sin(t),ny=Math.cos(t);
+  for(let u=.3;u<L;u+=.55){const a=p[0]+(q[0]-p[0])*u/L-nx*.17,b=p[1]+(q[1]-p[1])*u/L-ny*.17;B(BODY,a,b,.32,.26,.24,t,WB,G,{win:[.5,0,.2]});B(PROP,a,b,.38,.32,.03,t,[.9,.62,.4],G+.24);}
+  lamp(q[0]+.3,q[1]+.2,G+.4,GOLD);}
+ {const [x,y]=W(16.55,-1.55);box(CYL,x,y,.42,.42,.12,0,ROCK,did,G-.05);box(CYL,x,y,.26,.26,1.05,0,WB,did,G);box(CYL,x,y,.27,.27,.18,0,[.75,.12,.12],did,G+.55);
+  box(CYL,x,y,.2,.2,.18,0,[.85,.9,1],did,G+1.05);box(CYL,x,y,.28,.28,.04,0,[.2,.2,.22],did,G+1.23);BEAC.push({x,y,h:G+1.18,did});}
+ // ---- the marina: three jetties from the promenade with finger piers, yachts in the berths, lamps along the jetties
+ const shoreA=b=>b<-10.5?1.1:b<-9.5?.25:-.65;
+ [-8.6,-10.1,-11.6].forEach((b,j)=>{const a0=shoreA(b)-.3,a1=6;seg(PROP,[a0,b],[a1,b],.24,.06,[.8,.79,.76],.06);
+  for(let a=a0+.9;a<a1-.2;a+=.75)for(const sd of [-1,1]){if(j===2&&sd<0)continue;seg(PROP,[a,b+sd*.12],[a,b+sd*.66],.1,.05,[.78,.77,.74],.06);
+   if(vr()<.6){const yb=b+sd*.42,ya=a+.36,L=VR(.55,.75),[x,y]=W(ya,yb),r=dirR(sd>0?Math.PI/2:-Math.PI/2),dk=vr()<.35;
+    hullMesh(x,y,r,L,L*.3,.16,-.04,dk?0x15192a:0xf0f0f2);B(PROP,ya,yb-sd*.05,L*.24,L*.45,.12,0,WB,.12);B(PROP,ya,yb-sd*.08,L*.18,L*.28,.08,0,WB,.24);lamp(ya,yb,.3,[1,.92,.75]);}}
+  for(let a=a0+.5;a<a1;a+=1.2)lamp(a,b+.14,.32,GOLD);});
+ const [ex,ey]=W(7.75,-10.85);BEAC.push({x:ex,y:ey,h:.65,did});box(CYL,ex,ey,.14,.14,.55,0,[.85,.2,.2],did,.1);
+ // its parts keep their hand-picked colours (day and night) and their lights aren't dimmed over the water
+ VER.lists.forEach((L,k)=>{for(let i=n0[k];i<L.length;i++)L[i].lmk=l;});
+ return G+4.55;}
 // ---------------- THE UNDERPARK (URL) — underground rave in an abandoned two-level parking garage ----------------
 // Sized like a real city-block garage (~2.2 x 1.7 units, two low levels); neighbouring buildings stand right up against it.
 function underPark(x,y,did){
