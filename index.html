@@ -158,10 +158,9 @@ html,body{margin:0;height:100%;background:#05040c;color:var(--txt);font-family:u
 <script>
 (()=>{
 'use strict';
-// map scale: the city's layout (coast, districts, roads, landmark positions) is drawn on the original 120×90 plan and enlarged 2×;
-// buildings, streets and landmark models keep their real size, so the extra room fills with city blocks
-const MS=2;
-const MW=120*MS,MH=90*MS,S=12,PW=MW*S,PH=MH*S,DS=6,DW=MW*DS,DH=MH*DS;
+// Map coordinates: the map is MW×MH = 240×180 units, x runs west→east and y north→south.
+// Every position in this file is a real map coordinate; a 3D point sits at (x-MW/2, height, y-MH/2).
+const MW=240,MH=180,S=12,PW=MW*S,PH=MH*S,DS=6,DW=MW*DS,DH=MH*DS;
 const clamp=(v,a,b)=>v<a?a:v>b?b:v;
 function hash(x,y){let h=(Math.imul(x|0,374761393)+Math.imul(y|0,668265263))|0;h=Math.imul(h^(h>>>13),1274126177);h^=h>>>16;return(h>>>0)/4294967296;}
 function vnoise(x,y){const xi=Math.floor(x),yi=Math.floor(y),xf=x-xi,yf=y-yi,u=xf*xf*(3-2*xf),v=yf*yf*(3-2*yf);const a=hash(xi,yi),b=hash(xi+1,yi),c=hash(xi,yi+1),d=hash(xi+1,yi+1);return a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v;}
@@ -194,74 +193,64 @@ const GROUPS={
  DEAD:{name:'Dead-End',col:'#d08a5c',desc:"A much shadier, abandoned edge of the city. Streets bordering other neighborhoods are blocked off by the forever-unfinished construction of long-cancelled development projects. Police rarely bother coming here — anything and anyone is up for grabs."}
 };
 const D=[
-{key:'coffer',num:'1',name:'The Coffer',g:'RLD',col:'#ff2e93',seeds:[[52,65.5]],w:15,st:[2.4,.1,.32],h:[2.4,6.2],p:.95,k:2,f:.86,neon:.7,peak:[52,65.5,1.7,40],lh:16,sty:'neon',win:[.75,2,.32],desc:"The busiest, most central and most profitable area of the RLD. The Three Velvets stand at its very center, and the Candyshop is found here too."},
-{key:'bottom',num:'2',name:'Bottom Heap',g:'RLD',col:'#ff5468',seeds:[[51,81]],w:-25,st:[2.2,-.22,.3],h:[1.6,4.2],p:.9,k:2,f:.86,neon:.6,lh:8,sty:'neon',win:[.7,2,.3],desc:"The second-busiest area of the RLD, in direct competition with the Coffer, and known for its sex stores. The Old Playground and Petite Pleasures sit side by side on the same street (the glowing one), with the Cake'd Up Wish and the Vault nearby."},
-{key:'greenway',num:'3',name:'Greenway',g:'RLD',col:'#39e07a',seeds:[[55,53.5]],w:0,st:[2.8,.35,.38],h:[.8,2.2],p:.5,k:2,f:.8,neon:.15,lh:6,sty:'green',win:[.55,0,.3],desc:"An almost entirely pedestrian neighborhood known for its green streetlights at night and greenery so abundant it blocks out the sky on some streets. The Menagerie is found here."},
+{key:'coffer',num:'1',name:'The Coffer',g:'RLD',col:'#ff2e93',seeds:[[104,131]],w:60,st:[2.4,.1,.32],h:[2.4,6.2],p:.95,k:2,f:.86,neon:.7,peak:[104,131,1.7,160],lh:16,sty:'neon',win:[.75,2,.32],desc:"The busiest, most central and most profitable area of the RLD. The Three Velvets stand at its very center, and the Candyshop is found here too."},
+{key:'bottom',num:'2',name:'Bottom Heap',g:'RLD',col:'#ff5468',seeds:[[102,162]],w:-100,st:[2.2,-.22,.3],h:[1.6,4.2],p:.9,k:2,f:.86,neon:.6,lh:8,sty:'neon',win:[.7,2,.3],desc:"The second-busiest area of the RLD, in direct competition with the Coffer, and known for its sex stores. The Old Playground and Petite Pleasures sit side by side on the same street (the glowing one), with the Cake'd Up Wish and the Vault nearby."},
+{key:'greenway',num:'3',name:'Greenway',g:'RLD',col:'#39e07a',seeds:[[110,107]],w:0,st:[2.8,.35,.38],h:[.8,2.2],p:.5,k:2,f:.8,neon:.15,lh:6,sty:'green',win:[.55,0,.3],desc:"An almost entirely pedestrian neighborhood known for its green streetlights at night and greenery so abundant it blocks out the sky on some streets. The Menagerie is found here."},
 {key:'piers',num:'4',name:'The Piers',g:'RLD',col:'#ff8ad8',seeds:[],st:[2.2,Math.PI/4,.3],h:[2,7],p:.8,k:1,f:.82,neon:.65,lh:10,sty:'neon',win:[.72,0,.3],desc:"A waterside stretch of the RLD running along most of the coast until it meets South-of-Wharf, filled with restaurants and hotels. Sinful Sunday is located here."},
-{key:'shambles',num:'5',name:'Shambles',g:'RLD',col:'#b54dff',seeds:[[35.5,60],[36,71],[39,83]],w:15,st:[2,-.14,.26],h:[1.3,3.8],p:.92,k:2,f:.88,neon:.4,lh:7,sty:'neon',win:[.6,2,.28],desc:"One of the bigger neighborhoods — a wilder part of town whose streets get far busier at night than during the day. The Breeding Ranch is found here."},
-{key:'oak',num:'6',name:'Oak-Mount',g:'RES',col:'#8fb3ff',seeds:[[54,29.5]],w:0,st:[3.4,.3,.26],h:[.6,1.4],p:.55,k:2,f:.62,lh:5,sty:'house',win:[.5,0,.35],desc:"A rich neighborhood near Downtown where the city's high-class urban residents live. It also has a small airport."},
-{key:'narrows',num:'7',name:'The Narrows',g:'RES',col:'#5d74f0',seeds:[[70,32.5],[78,35.5],[85,37.5]],w:0,st:[1.5,.55,.16],h:[1.1,3],p:.95,k:1,f:.9,lh:6,sty:'apt',win:[.55,0,.26],desc:"A lower-income neighborhood named for its constricting streets. It's full of businesses and has a vibrant nightlife, but its more isolated corners can be dangerous places to be caught alone."},
-{key:'lr',num:'8',short:'L-R',name:'Little Rio',g:'RES',col:'#b19bff',sub:1,seeds:[[57,37.5]],w:-70,st:[2,.2,.24],h:[1,2.6],p:.9,k:2,f:.86,lh:4,sty:'apt',win:[.6,0,.28],desc:"One of the three Latin Enclaves, home to a Brazilian diaspora pushed right up against its two neighbors."},
-{key:'lv',num:'8',short:'L-V',name:'Little Venice',g:'RES',col:'#4fc3f7',sub:1,seeds:[[58,44]],w:-70,st:[1.9,.42,.24],h:[1,2.6],p:.9,k:2,f:.86,lh:4,sty:'apt',win:[.6,0,.28],desc:"One of the three Latin Enclaves. The canal and its residential blocks spill in here from the Canals district."},
-{key:'lp',num:'8',short:'L-P',name:'Little Palma',g:'RES',col:'#7dd3c0',sub:1,seeds:[[62.5,40.5]],w:-70,st:[2,-.1,.24],h:[1,2.6],p:.9,k:2,f:.86,lh:4,sty:'apt',win:[.6,0,.28],desc:"One of the three Latin Enclaves, pressed right up against Little Rio and Little Venice."},
-{key:'sow',num:'9',name:'South-of-Wharf',short:'S-O-W',g:'RES',col:'#6a72c9',seeds:[[66.5,60.5],[74,59.5]],w:5,st:[1.8,.05,.2],h:[2,4.8],p:.95,k:1,f:.9,lh:8,sty:'apt',win:[.22,3,.26],desc:"The worst neighborhood to live in outside of Dead-End. Tourists rarely come here, and the police come even less. Locals are afraid to leave their cramped apartments, even in broad daylight. The Little Hearts Orphanage, where Mason and Connor grew up, is here."},
+{key:'shambles',num:'5',name:'Shambles',g:'RLD',col:'#b54dff',seeds:[[71,120],[72,142],[78,166]],w:60,st:[2,-.14,.26],h:[1.3,3.8],p:.92,k:2,f:.88,neon:.4,lh:7,sty:'neon',win:[.6,2,.28],desc:"One of the bigger neighborhoods — a wilder part of town whose streets get far busier at night than during the day. The Breeding Ranch is found here."},
+{key:'oak',num:'6',name:'Oak-Mount',g:'RES',col:'#8fb3ff',seeds:[[108,59]],w:0,st:[3.4,.3,.26],h:[.6,1.4],p:.55,k:2,f:.62,lh:5,sty:'house',win:[.5,0,.35],desc:"A rich neighborhood near Downtown where the city's high-class urban residents live. It also has a small airport."},
+{key:'narrows',num:'7',name:'The Narrows',g:'RES',col:'#5d74f0',seeds:[[140,65],[156,71],[170,75]],w:0,st:[1.5,.55,.16],h:[1.1,3],p:.95,k:1,f:.9,lh:6,sty:'apt',win:[.55,0,.26],desc:"A lower-income neighborhood named for its constricting streets. It's full of businesses and has a vibrant nightlife, but its more isolated corners can be dangerous places to be caught alone."},
+{key:'lr',num:'8',short:'L-R',name:'Little Rio',g:'RES',col:'#b19bff',sub:1,seeds:[[114,75]],w:-280,st:[2,.2,.24],h:[1,2.6],p:.9,k:2,f:.86,lh:4,sty:'apt',win:[.6,0,.28],desc:"One of the three Latin Enclaves, home to a Brazilian diaspora pushed right up against its two neighbors."},
+{key:'lv',num:'8',short:'L-V',name:'Little Venice',g:'RES',col:'#4fc3f7',sub:1,seeds:[[116,88]],w:-280,st:[1.9,.42,.24],h:[1,2.6],p:.9,k:2,f:.86,lh:4,sty:'apt',win:[.6,0,.28],desc:"One of the three Latin Enclaves. The canal and its residential blocks spill in here from the Canals district."},
+{key:'lp',num:'8',short:'L-P',name:'Little Palma',g:'RES',col:'#7dd3c0',sub:1,seeds:[[125,81]],w:-280,st:[2,-.1,.24],h:[1,2.6],p:.9,k:2,f:.86,lh:4,sty:'apt',win:[.6,0,.28],desc:"One of the three Latin Enclaves, pressed right up against Little Rio and Little Venice."},
+{key:'sow',num:'9',name:'South-of-Wharf',short:'S-O-W',g:'RES',col:'#6a72c9',seeds:[[133,121],[148,119]],w:20,st:[1.8,.05,.2],h:[2,4.8],p:.95,k:1,f:.9,lh:8,sty:'apt',win:[.22,3,.26],desc:"The worst neighborhood to live in outside of Dead-End. Tourists rarely come here, and the police come even less. Locals are afraid to leave their cramped apartments, even in broad daylight. The Little Hearts Orphanage, where Mason and Connor grew up, is here."},
 {key:'out',num:'10',name:'The Outskirts',g:'RES',col:'#86b06f',seeds:[],st:[9,.15,.24],h:[.5,.95],p:.42,k:1,f:.26,lh:4,sty:'house',win:[.45,0,.38],desc:"Beyond the city proper, the homes only get bigger and bigger until they occupy entire fields. The Lion's estate is out here."},
 {key:'fingers',num:'11',name:'The Fingers',g:'DOCK',col:'#ffae3d',seeds:[],st:[2.6,0,.3],h:[.6,1.3],p:.85,k:1,f:.88,lh:5,sty:'dock',win:[.06,1,.4],desc:"The main area of the port, shaped like a hand worn out of the coastline. Each quay is one of the fingers: the Pinky, the Ring, the Middle, the Index and the Thumb."},
-{key:'canals',num:'12',name:'The Canals',g:'DOCK',col:'#ffd166',seeds:[[70,48.5],[80,45.5]],w:0,st:[2.4,.04,.28],h:[1.1,2.8],p:.85,k:2,f:.86,lh:6,sty:'canal',win:[.32,0,.3],desc:"A busy district where the ocean flows deeper into the city through canals carrying smaller cargo ships. Factories line either side of the water until they become residential blocks that spill into Little Venice."},
-{key:'belle',num:'13',name:'Belle Plaza',g:'DOWN',col:'#3de0ff',seeds:[[35,33.5]],w:0,st:[3,0,.42],h:[3,7.5],p:.85,k:1,f:.78,peak:[35,33.5,1.4,50],lh:12,sty:'tower',win:[.55,1,.36],desc:"The main government block, where the Syndicate runs the city. Many high-end apartment buildings surround it."},
-{key:'sky',num:'14',name:'Skyblock',g:'DOWN',col:'#19a7e6',seeds:[[28.5,46]],w:0,st:[2.6,0,.42],h:[4,12],p:.92,k:1,f:.74,peak:[29,46,1.5,45],pow:1,lh:22,sty:'tower',win:[.5,1,.34],desc:"Blissport's main financial business zone, full of tall skyscrapers."},
-{key:'junction',num:'15',name:'The Junction',g:'DOWN',col:'#9be8f2',seeds:[[46,42]],w:0,st:[2.4,.2,.3],h:[1.4,3.8],p:.85,k:2,f:.84,lh:7,sty:'apt',win:[.5,0,.3],desc:"A smaller middle-class neighborhood where Downtown, the RLD and the residential zones all converge. The children's hospital is here, and the Dollhouse used to be here as well."},
-{key:'tin',num:'16',name:'The Tin Yard',g:'DEAD',col:'#d08a5c',seeds:[[20,75.5],[27,86]],w:0,st:[2.3,-.3,.22],h:[.8,2.2],p:.62,k:1,f:.86,lh:6,sty:'factory',win:[.03,3,.45],desc:"Mostly old abandoned factories from the city's industrial past, surrounded by run-down market areas and the skeletons of dead shopping malls. The Kennels are here, and the Unveiling often takes place in this area."},
-{key:'slag',num:'17',name:'Slag Town',g:'DEAD',col:'#a87a6a',seeds:[[19.5,57.5]],w:0,st:[1.4,.25,.16],h:[1.8,5.5],p:.97,k:1,f:.92,lh:9,sty:'apt',win:[.3,3,.26],desc:"The most densely populated area of Dead-End. The only laws here are those imposed by local gangs. The Mist Den used to be here."}
+{key:'canals',num:'12',name:'The Canals',g:'DOCK',col:'#ffd166',seeds:[[140,97],[160,91]],w:0,st:[2.4,.04,.28],h:[1.1,2.8],p:.85,k:2,f:.86,lh:6,sty:'canal',win:[.32,0,.3],desc:"A busy district where the ocean flows deeper into the city through canals carrying smaller cargo ships. Factories line either side of the water until they become residential blocks that spill into Little Venice."},
+{key:'belle',num:'13',name:'Belle Plaza',g:'DOWN',col:'#3de0ff',seeds:[[70,67]],w:0,st:[3,0,.42],h:[3,7.5],p:.85,k:1,f:.78,peak:[70,67,1.4,200],lh:12,sty:'tower',win:[.55,1,.36],desc:"The main government block, where the Syndicate runs the city. Many high-end apartment buildings surround it."},
+{key:'sky',num:'14',name:'Skyblock',g:'DOWN',col:'#19a7e6',seeds:[[57,92]],w:0,st:[2.6,0,.42],h:[4,12],p:.92,k:1,f:.74,peak:[58,92,1.5,180],pow:1,lh:22,sty:'tower',win:[.5,1,.34],desc:"Blissport's main financial business zone, full of tall skyscrapers."},
+{key:'junction',num:'15',name:'The Junction',g:'DOWN',col:'#9be8f2',seeds:[[92,84]],w:0,st:[2.4,.2,.3],h:[1.4,3.8],p:.85,k:2,f:.84,lh:7,sty:'apt',win:[.5,0,.3],desc:"A smaller middle-class neighborhood where Downtown, the RLD and the residential zones all converge. The children's hospital is here, and the Dollhouse used to be here as well."},
+{key:'tin',num:'16',name:'The Tin Yard',g:'DEAD',col:'#d08a5c',seeds:[[40,151],[54,172]],w:0,st:[2.3,-.3,.22],h:[.8,2.2],p:.62,k:1,f:.86,lh:6,sty:'factory',win:[.03,3,.45],desc:"Mostly old abandoned factories from the city's industrial past, surrounded by run-down market areas and the skeletons of dead shopping malls. The Kennels are here, and the Unveiling often takes place in this area."},
+{key:'slag',num:'17',name:'Slag Town',g:'DEAD',col:'#a87a6a',seeds:[[39,115]],w:0,st:[1.4,.25,.16],h:[1.8,5.5],p:.97,k:1,f:.92,lh:9,sty:'apt',win:[.3,3,.26],desc:"The most densely populated area of Dead-End. The only laws here are those imposed by local gangs. The Mist Den used to be here."}
 ];
 const ID={};D.forEach((d,i)=>ID[d.key]=i);
 const FNG=ID.fingers,OUT=ID.out,PIERS=ID.piers;
 const SEEDS=[];D.forEach((d,i)=>d.seeds.forEach(s=>SEEDS.push({x:s[0],y:s[1],w:d.w||0,id:i})));
-const COAST=[[98,-2],[96.5,8],[95,18],[93.5,28],[92,36],[90.5,41],[88.6,44.4],[87.3,47.4],[86.9,50],[87.1,54],[86.9,58],[86.5,61.5],[85.2,63.8],[82.6,65.7],[79.3,67.8],[75.5,70.3],[70.5,74.3],[65.5,79.3],[60.5,84.3],[57.2,88.6],[55.8,93]];
-const PIER=[[79.2,67.6],[75.5,70.2],[70.5,74.2],[65.5,79.2],[60.5,84.2],[57.2,88.5],[55.8,92]];
+const COAST=[[196,-4],[193,16],[190,36],[187,56],[184,72],[181,82],[177.2,88.8],[174.6,94.8],[173.8,100],[174.2,108],[173.8,116],[173,123],[170.4,127.6],[165.2,131.4],[158.6,135.6],[151,140.6],[141,148.6],[131,158.6],[121,168.6],[114.4,177.2],[111.6,186]];
+const PIER=[[158.4,135.2],[151,140.4],[141,148.4],[131,158.4],[121,168.4],[114.4,177],[111.6,184]];
 const FINGERS=[
- {name:'Pinky',p:[[85.5,49.6],[90.5,48.7],[94.6,47.6]],r:[1.35,.95]},
- {name:'Ring',p:[[85.5,52.8],[93,52.3],[99.6,51.5]],r:[1.45,1]},
- {name:'Middle',p:[[85.5,56],[94,56.2],[102.6,56.7]],r:[1.5,1.05]},
- {name:'Index',p:[[85.5,59.2],[93,60.1],[99.9,61.5]],r:[1.45,1]},
- {name:'Thumb',p:[[84.2,62.4],[88.6,66],[92.6,70.2]],r:[1.6,1.1]}];
-const ISLETS=[[104.6,58.4,.4],[97.2,45.9,.3],[95,72.6,.45],[102,49.8,.25]];
-const CANALS=[[[91,45.4],[86,45.7],[81,46.3],[75,46.9],[70,47.3],[65,46.9],[60.6,45.3]],[[74,46.95],[73.6,50.4],[69,52.4],[64.2,52.3]]];
-// base (unscaled) copies for the district classifier and the noisy coastline; then the layout is scaled in place for the size preview
-const COAST0=COAST.map(p=>p.slice()),PIER0=PIER.map(p=>p.slice()),FINGERS0=FINGERS.map(F=>({name:F.name,p:F.p.map(p=>p.slice()),r:F.r.slice()}));
-const BHS0=[[46.4,79.8],[56.8,79.8]],BHS=BHS0.map(p=>[p[0]*MS,p[1]*MS]); // Bottom Heap's glowing street
-if(MS!==1){[COAST,PIER,...CANALS].forEach(P=>P.forEach(p=>{p[0]*=MS;p[1]*=MS;}));
- FINGERS.forEach(F=>{F.p.forEach(p=>{p[0]*=MS;p[1]*=MS;});F.r=F.r.map(v=>v*MS);});ISLETS.forEach(i=>{i[0]*=MS;i[1]*=MS;i[2]*=MS;});
- D.forEach(d=>{if(d.peak){const p=d.peak;d.peak=[p[0]*MS,p[1]*MS,p[2],p[3]*MS*MS];}});}
+ {name:'Pinky',p:[[171,99.2],[181,97.4],[189.2,95.2]],r:[2.7,1.9]},
+ {name:'Ring',p:[[171,105.6],[186,104.6],[199.2,103]],r:[2.9,2]},
+ {name:'Middle',p:[[171,112],[188,112.4],[205.2,113.4]],r:[3,2.1]},
+ {name:'Index',p:[[171,118.4],[186,120.2],[199.8,123]],r:[2.9,2]},
+ {name:'Thumb',p:[[168.4,124.8],[177.2,132],[185.2,140.4]],r:[3.2,2.2]}];
+const ISLETS=[[209.2,116.8,.8],[194.4,91.8,.6],[190,145.2,.9],[204,99.6,.5]];
+const CANALS=[[[182,90.8],[172,91.4],[162,92.6],[150,93.8],[140,94.6],[130,93.8],[121.2,90.6]],[[148,93.9],[147.2,100.8],[138,104.8],[128.4,104.6]]];
+const BHS=[[92.8,159.6],[113.6,159.6]]; // Bottom Heap's glowing street
 const LM=[
- {id:'velvets',name:'The Three Velvets',d:'coffer',x:52,y:65.5,type:'velvets',ex:2.7,pin:3.2},
- {id:'candy',name:'The Candyshop',d:'coffer',x:55.4,y:68.4,h:3.4,pin:4.4},
- {id:'playground',name:'The Old Playground',d:'bottom',x:48.6,y:78.95,h:2.1,pin:3},
- {id:'petite',name:'Petite Pleasures',d:'bottom',x:51.4,y:78.95,h:2.6,pin:5.4},
- {id:'cake',name:"The Cake'd Up Wish",d:'bottom',x:50.2,y:85.6,h:2.4,pin:3.2},
- {id:'vault',name:'The Vault',d:'bottom',x:53.2,y:75.8,h:3.6,pin:4.2,c:'#9c2a52'},
- {id:'menagerie',name:'The Menagerie',d:'greenway',x:55,y:53.5,type:'dome',ex:1.6,pin:3.2},
- {id:'sunday',name:'Sinful Sunday',d:'piers',x:65.6,y:75.6,h:6.5,pin:3.2},
- {id:'ranch',name:'The Breeding Ranch',d:'shambles',x:35,y:67,h:2.4,w:2.2,dp:1.6,ex:1.6,pin:3.2},
- {id:'airport',name:'Oak-Mount Airport',d:'oak',x:55.41,y:30.05,type:'airport',ex:.1,pin:3},
- {id:'orphanage',name:'Little Hearts Orphanage',d:'sow',x:69,y:63,h:2.2,w:1.8,dp:1.2,c:'#6a7096',pin:3.2},
- {id:'lion',name:"The Lion's Estate",d:'out',x:18,y:22,type:'estate',ex:8.6,pin:3.2},
- {id:'syndicate',name:'Syndicate Government Block',d:'belle',x:35,y:33.5,type:'gov',ex:2.7,pin:3.2},
- {id:'hospital',name:"Children's Hospital",d:'junction',x:46.5,y:41.5,h:3.4,w:2,dp:1.5,c:'#dfe9f2',pin:3.2},
- {id:'dollhouse',name:'The Dollhouse',d:'junction',x:43.8,y:44.3,h:1.5,former:1,pin:4.4,ver:'civ'},
- {id:'kennels',name:'The Kennels',d:'tin',x:19.5,y:76,type:'kennels',ex:2,pin:3.2},
- {id:'unveiling',name:'The Unveiling',d:'tin',x:24.5,y:82,type:'open',ex:2.1,note:'event site',pin:3.2},
- {id:'mist',name:'The Mist Den',d:'slag',x:18,y:59.5,h:1.8,former:1,pin:3.2},
- {id:'dragon',name:"The Dragon's Mansion",d:'out',x:35,y:11,type:'dragon',ex:6.6,pin:3.2},
+ {id:'velvets',name:'The Three Velvets',d:'coffer',x:104,y:131,type:'velvets',ex:2.7,pin:3.2},
+ {id:'candy',name:'The Candyshop',d:'coffer',x:110.8,y:136.8,h:3.4,pin:4.4},
+ {id:'playground',name:'The Old Playground',d:'bottom',x:97.2,y:158.75,h:2.1,pin:3},
+ {id:'petite',name:'Petite Pleasures',d:'bottom',x:102.8,y:158.75,h:2.6,pin:5.4},
+ {id:'cake',name:"The Cake'd Up Wish",d:'bottom',x:100.4,y:171.2,h:2.4,pin:3.2},
+ {id:'vault',name:'The Vault',d:'bottom',x:106.4,y:151.6,h:3.6,pin:4.2,c:'#9c2a52'},
+ {id:'menagerie',name:'The Menagerie',d:'greenway',x:110,y:107,type:'dome',ex:1.6,pin:3.2},
+ {id:'sunday',name:'Sinful Sunday',d:'piers',x:132.95,y:152.95,h:6.5,pin:3.2},
+ {id:'ranch',name:'The Breeding Ranch',d:'shambles',x:70.114317,y:130.570477,h:2.4,w:2.2,dp:1.6,ex:1.6,pin:3.2},
+ {id:'airport',name:'Oak-Mount Airport',d:'oak',x:110.82,y:60.1,type:'airport',ex:.1,pin:3},
+ {id:'orphanage',name:'Little Hearts Orphanage',d:'sow',x:138,y:126,h:2.2,w:1.8,dp:1.2,c:'#6a7096',pin:3.2},
+ {id:'lion',name:"The Lion's Estate",d:'out',x:36,y:44,type:'estate',ex:8.6,pin:3.2},
+ {id:'syndicate',name:'Syndicate Government Block',d:'belle',x:70,y:67,type:'gov',ex:2.7,pin:3.2},
+ {id:'hospital',name:"Children's Hospital",d:'junction',x:93,y:83,h:3.4,w:2,dp:1.5,c:'#dfe9f2',pin:3.2},
+ {id:'dollhouse',name:'The Dollhouse',d:'junction',x:87.6,y:88.6,h:1.5,former:1,pin:4.4,ver:'civ'},
+ {id:'kennels',name:'The Kennels',d:'tin',x:40.941176,y:149.735294,type:'kennels',ex:2,pin:3.2},
+ {id:'unveiling',name:'The Unveiling',d:'tin',x:49,y:164,type:'open',ex:2.1,note:'event site',pin:3.2},
+ {id:'mist',name:'The Mist Den',d:'slag',x:36,y:119,h:1.8,former:1,pin:3.2},
+ {id:'dragon',name:"The Dragon's Mansion",d:'out',x:70,y:22,type:'dragon',ex:6.6,pin:3.2},
  // ver:'url' = only exists in the later (URL) version of the map
- {id:'landho',name:'Land Ho!',d:'piers',x:79.4,y:78.7,type:'landho',ex:.1,pin:3.2,ver:'url',note:'yachting club'},
- {id:'luckygem',name:'The Lucky Gem',d:'junction',x:43.9,y:44.6,type:'sapphire',ex:.1,pin:2,ver:'url'},
- {id:'highnote',name:'High Note',d:'sky',x:28.6,y:46.6,ex:.1,pin:2,ver:'url',note:'club'}];
-// size preview: landmarks move with the enlarged layout; those facing the shore or a street keep their distance to it
-function nearOn(px,py,P){let b=null,bd=1e18;for(let i=0;i<P.length-1;i++){const a=P[i],c=P[i+1],dx=c[0]-a[0],dy=c[1]-a[1],t=clamp(((px-a[0])*dx+(py-a[1])*dy)/(dx*dx+dy*dy),0,1),qx=a[0]+t*dx,qy=a[1]+t*dy,d=(qx-px)**2+(qy-py)**2;if(d<bd){bd=d;b=[qx,qy];}}return b;}
-if(MS!==1){const CW=[[9,61.4],[18,62.6],[27,63.3],[36,63.6],[43,64.2],[48.7,65]],TYR=[[11,69.5],[20,72.5],[27,78.5],[31.5,85],[33,90.8]], // Crosstown West, Tin Yard Road
- LMA={sunday:PIER0,landho:PIER0,playground:BHS0,petite:BHS0,ranch:CW,kennels:TYR};
- LM.forEach(l=>{const A=LMA[l.id];if(A){const q=nearOn(l.x,l.y,A);l.x=q[0]*MS+l.x-q[0];l.y=q[1]*MS+l.y-q[1];}else{l.x*=MS;l.y*=MS;}});}
+ {id:'landho',name:'Land Ho!',d:'piers',x:153.131707,y:150.314634,type:'landho',ex:.1,pin:3.2,ver:'url',note:'yachting club'},
+ {id:'luckygem',name:'The Lucky Gem',d:'junction',x:87.8,y:89.2,type:'sapphire',ex:.1,pin:2,ver:'url'},
+ {id:'highnote',name:'High Note',d:'sky',x:57.2,y:93.2,ex:.1,pin:2,ver:'url',note:'club'}];
 const LMXY=id=>{const l=LM.find(q=>q.id===id);return[l.x,l.y];},APT=LM.find(l=>l.id==='airport'),AP=(dx,dy)=>[APT.x+dx,APT.y+dy];
 // The Underpark (URL): Tin Yard, on its northern side toward Slag Town — placed clear of the Kennels and the Unveiling
 (()=>{const g=id=>LM.find(l=>l.id===id),kn=g('kennels'),un=g('unveiling'),mi=g('mist');if(!kn||!un||!mi)return;
@@ -331,12 +320,12 @@ const EXC=LM.map(l=>({x:l.x,y:l.y,r:l.ex||1.25}));
 EXC.push({s:[...AP(-5.24,-.26),...AP(4.42,-2.84)],r:1.3},{s:[...BHS[0],...BHS[1]],r:.5},{x:APT.x,y:APT.y,r:1.7});
 function excluded(x,y){for(const e of EXC){if(e.s){if(segDist(x,y,e.s[0],e.s[1],e.s[2],e.s[3])<e.r)return true;}else{const dx=x-e.x,dy=y-e.y;if(dx*dx+dy*dy<e.r*e.r)return true;}}return false;}
 
-function classify(mx,my){mx/=MS;my/=MS; // districts are laid out on the original 120×90 plan, then scaled up
- const n1=fbm(mx*.09,my*.09),n2=fbm(mx*.09+40.3,my*.09+17.7),fx=mx+(n1-.5)*2;
- if((fx>81&&my>47.8&&my<64.5)||(fx>84&&my>=64.5&&my<73)||(mx>88&&my>45.6&&my<75))return FNG;
- const ex=(mx-56)/48,ey=(my-62)/40;if(ex*ex+ey*ey+(n2-.5)*.32>1)return OUT;
- if(my>64&&polyDist(mx,my,PIER0)<4+(n1-.5)*1.6)return PIERS;
- const wx=mx+(n1-.5)*5,wy=my+(n2-.5)*5;let best=0,bs=1e18;
+function classify(mx,my){
+ const n1=fbm(mx*.045,my*.045),n2=fbm(mx*.045+40.3,my*.045+17.7),fx=mx+(n1-.5)*4;
+ if((fx>162&&my>95.6&&my<129)||(fx>168&&my>=129&&my<146)||(mx>176&&my>91.2&&my<150))return FNG;
+ const ex=(mx-112)/96,ey=(my-124)/80;if(ex*ex+ey*ey+(n2-.5)*.32>1)return OUT;
+ if(my>128&&polyDist(mx,my,PIER)<8+(n1-.5)*3.2)return PIERS;
+ const wx=mx+(n1-.5)*10,wy=my+(n2-.5)*10;let best=0,bs=1e18;
  for(let k=0;k<SEEDS.length;k++){const s=SEEDS[k],dx=wx-s.x,dy=wy-s.y,v=dx*dx+dy*dy-s.w;if(v<bs){bs=v;best=s.id;}}
  return best;
 }
@@ -348,14 +337,15 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.75));renderer.setCl
 renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 wrap.insertBefore(renderer.domElement,wrap.firstChild);
 const el=renderer.domElement;
-const scene=new THREE.Scene();scene.fog=new THREE.Fog(0x200c2c,210*MS,440*MS);
-const camera=new THREE.PerspectiveCamera(42,1,.5,1500*MS);
+const scene=new THREE.Scene();scene.fog=new THREE.Fog(0x200c2c,420,880);
+const camera=new THREE.PerspectiveCamera(42,1,.5,3000);
 scene.add(new THREE.HemisphereLight(0x4a5cff,0x1a0c24,.34));
-const moon=new THREE.DirectionalLight(0x9db0ff,.5);moon.position.set(60*MS,110*MS,-45*MS);moon.castShadow=true;moon.shadow.mapSize.set(2048,2048);
-Object.assign(moon.shadow.camera,{left:-80*MS,right:80*MS,top:80*MS,bottom:-80*MS,near:10,far:300*MS});moon.shadow.bias=-.0006;moon.shadow.camera.updateProjectionMatrix();scene.add(moon,moon.target);
+const moon=new THREE.DirectionalLight(0x9db0ff,.5);const SHC=[-30,-22]; // shadow centre: middle of the map plus the hills past its west and north edges (moving the target with the moon keeps the light direction)
+moon.position.set(120+SHC[0],220,-90+SHC[1]);moon.target.position.set(SHC[0],0,SHC[1]);moon.castShadow=true;moon.shadow.mapSize.set(2048,2048);
+Object.assign(moon.shadow.camera,{left:-190,right:190,top:190,bottom:-190,near:10,far:700});moon.shadow.bias=-.0006;moon.shadow.camera.updateProjectionMatrix();scene.add(moon,moon.target);
 // district light spill: x,y,height,color,intensity,distance
-[[52,66,14,0xff3da5,2.3,48],[55,53.5,6,0x39e07a,1.6,22],[29,46,18,0x3de0ff,1.2,36],[35,33.5,10,0x7fe0ff,.8,24],[90,56,8,0xffae3d,1.3,30],[66,78,8,0xff6fd0,1.3,30],[38,72,8,0xb54dff,1,30],[20,72,6,0xff7a2e,.5,26]]
- .forEach(p=>{const l=new THREE.PointLight(p[3],p[4],p[5]*MS);l.position.set(p[0]*MS-MW/2,p[2],p[1]*MS-MH/2);scene.add(l);});
+[[104,132,14,0xff3da5,2.3,96],[110,107,6,0x39e07a,1.6,44],[58,92,18,0x3de0ff,1.2,72],[70,67,10,0x7fe0ff,.8,48],[180,112,8,0xffae3d,1.3,60],[132,156,8,0xff6fd0,1.3,60],[76,144,8,0xb54dff,1,60],[40,144,6,0xff7a2e,.5,52]]
+ .forEach(p=>{const l=new THREE.PointLight(p[3],p[4],p[5]);l.position.set(p[0]-MW/2,p[2],p[1]-MH/2);scene.add(l);});
 // sky dome + stars
 scene.add(new THREE.Mesh(new THREE.SphereGeometry(900,32,16),new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,fog:false,
  vertexShader:'varying vec3 vP;void main(){vP=normalize(position);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
@@ -430,7 +420,7 @@ function initDN(){DN.ready=true;
   // outskirts (and the land beyond the old map edge): natural forest floor instead of farm fields
   '{vec4 dq=texture2D(tDist,uc);float oob=float(vUv.x<0.||vUv.x>1.||vUv.y<0.||vUv.y>1.);'+
   'float isO=max(oob,(1.-step(.5,abs(floor(dq.r*255.+.5)-'+OUT+'.)))*(1.-step(.5,dq.g)));'+
-  'if(isO>.5){vec2 q=vec2(vUv.x*120.,(1.-vUv.y)*90.);float n=vn(q*.35)*.6+vn(q*1.7)*.4,m=vn(q*.08+7.);'+
+  'if(isO>.5){vec2 q=vec2(vUv.x*240.,(1.-vUv.y)*180.);float n=vn(q*.35)*.6+vn(q*1.7)*.4,m=vn(q*.08+7.);'+
   'vec3 fl=mix(vec3(.18,.27,.14),vec3(.32,.33,.19),n);fl=mix(fl,vec3(.34,.29,.2),smoothstep(.6,.85,m)*.6);'+
   'tn=vec4(fl*.06,1.);td=vec4(fl*.62,1.);}}'+
   'diffuseColor*=mix(tn,td,uDay);');streetShader(s);};
@@ -451,9 +441,9 @@ function initDN(){DN.ready=true;
   DN.target=DN.target?0:1;b.textContent=DN.target?'☾ Night':'☀ Day';});}
 function applyDay(d){const e=d*d*(3-2*d),L=(a,b)=>a+(b-a)*e;
  DN.sU.value=e;DN.gU.value=e;water.material.uniforms.uDay.value=e;DN.ground.emissiveIntensity=1-e;
- scene.fog.color.copy(DN.fogN).lerp(DN.fogD,e);scene.fog.near=L(210,260)*MS;scene.fog.far=L(440,720)*MS;
+ scene.fog.color.copy(DN.fogN).lerp(DN.fogD,e);scene.fog.near=L(420,520);scene.fog.far=L(880,1440);
  DN.hemi.color.copy(DN.hN[0]).lerp(DN.hD[0],e);DN.hemi.groundColor.copy(DN.hN[1]).lerp(DN.hD[1],e);DN.hemi.intensity=L(.34,.62);
- moon.color.copy(DN.mN).lerp(DN.mD,e);moon.intensity=L(.5,1);moon.position.set(L(60,-55)*MS,L(110,95)*MS,L(-45,50)*MS);renderer.shadowMap.needsUpdate=true;
+ moon.color.copy(DN.mN).lerp(DN.mD,e);moon.intensity=L(.5,1);moon.position.set(L(120,-110)+SHC[0],L(220,190),L(-90,100)+SHC[1]);renderer.shadowMap.needsUpdate=true;
  DN.pl.forEach(([l,i])=>l.intensity=i*L(1,.06));
  DN.stars.material.opacity=.7*(1-e);DN.lamps.material.opacity=1-e;
  DN.add.forEach(([m,o])=>m.material.opacity=o*(m.position.y<.2?1-e:L(1,.4)));
@@ -498,21 +488,21 @@ function initSnow(){SNW.ready=true;
  const N=26000,W=150,H=45,pos=new Float32Array(N*3),rnd=new Float32Array(N);
  for(let i=0;i<N;i++){pos[i*3]=Math.random()*W;pos[i*3+1]=Math.random()*H;pos[i*3+2]=Math.random()*W;rnd[i]=Math.random();}
  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(pos,3));g.setAttribute('aR',new THREE.BufferAttribute(rnd,1));
- SNW.mat=new THREE.ShaderMaterial({transparent:true,depthWrite:false,uniforms:{uT:{value:0},uC:{value:new THREE.Vector3()},uO:{value:0},uDay:DN.gU,uScale:{value:500}},
-  vertexShader:`attribute float aR;uniform float uT,uScale;uniform vec3 uC;varying float vA;
+ SNW.mat=new THREE.ShaderMaterial({transparent:true,depthWrite:false,uniforms:{uT:{value:0},uC:{value:new THREE.Vector3()},uO:{value:0},uDay:DN.gU,uScale:{value:500},uK:{value:1}},
+  vertexShader:`attribute float aR;uniform float uT,uScale,uK;uniform vec3 uC;varying float vA;
 void main(){vec3 p=position;p.y=mod(p.y-uT*(1.1+aR*.9),${H}.);p.x+=sin(uT*.5+aR*40.)*.6;p.z+=cos(uT*.4+aR*25.)*.6;
-p.xz=mod(p.xz-uC.xz+${W/2}.,${W}.)+uC.xz-${W/2}.;vec4 mv=modelViewMatrix*vec4(p,1.);vA=.55+.45*aR;
-gl_PointSize=(.6+aR)*uScale*.25/(-mv.z);gl_Position=projectionMatrix*mv;}`,
+p.xz=mod(p.xz-uC.xz/uK+${W/2}.,${W}.)-${W/2}.;p=vec3(uC.x+p.x*uK,p.y*uK,uC.z+p.z*uK);vec4 mv=modelViewMatrix*vec4(p,1.);vA=.55+.45*aR;
+gl_PointSize=(.6+aR)*uScale*.25*uK/(-mv.z);gl_Position=projectionMatrix*mv;}`,
   fragmentShader:`uniform float uO,uDay;varying float vA;void main(){vec2 c=gl_PointCoord-.5;float a=smoothstep(.5,.15,length(c));gl_FragColor=vec4(mix(vec3(.55,.6,.72),vec3(1.),uDay),a*uO*vA);}`});
  SNW.pts=new THREE.Points(g,SNW.mat);SNW.pts.frustumCulled=false;SNW.pts.visible=false;scene.add(SNW.pts);}
 function snowStep(){if(!SNW.ready){if(!DN.ready)return;initSnow();}
  SNW.v+=clamp(SNW.target-SNW.v,-.012*FS,.012*FS);const s=SNW.v*SNW.v*(3-2*SNW.v);SNW.u.value=s;
- const U=SNW.mat.uniforms;U.uT.value=clock.getElapsedTime();U.uO.value=s*.9;U.uC.value.copy(target);U.uScale.value=renderer.getDrawingBufferSize(SNW.v2).y*.5;SNW.pts.visible=s>.001;
+ const U=SNW.mat.uniforms;U.uT.value=clock.getElapsedTime();U.uO.value=s*.9;U.uC.value.copy(target);U.uScale.value=renderer.getDrawingBufferSize(SNW.v2).y*.5;U.uK.value=Math.max(1,radius/118);SNW.pts.visible=s>.001;
  if(s===0&&SNW.last===0)return;SNW.last=s;
  // winter weather on top of the current day/night state
  const d=DN.day,e=d*d*(3-2*d),L=(a,b)=>a+(b-a)*e;
  scene.fog.color.copy(DN.fogN).lerp(DN.fogD,e).lerp(new THREE.Color().setRGB(L(.06,.66),L(.06,.68),L(.09,.72)),s*.8);
- scene.fog.near=L(210,260)*MS*(1-.6*s);scene.fog.far=L(440,720)*MS*(1-.5*s);
+ scene.fog.near=L(420,520)*(1-.6*s);scene.fog.far=L(880,1440)*(1-.5*s);
  moon.intensity=L(.5,1)*(1-.45*s);DN.hemi.intensity=L(.34,.62)*(1+.2*s);DN.stars.material.opacity=.7*(1-e)*(1-s);}
 
 function render(){
@@ -529,16 +519,16 @@ function render(){
 let land,dgrid,landH,bdr,ADJ,ST;
 const landAt=(mx,my)=>{const x=Math.floor(mx*S),y=Math.floor(my*S);return x>=0&&y>=0&&x<PW&&y<PH&&land[y*PW+x]===1;};
 const distAt=(mx,my)=>{const x=Math.floor(mx*DS),y=Math.floor(my*DS);return(x>=0&&y>=0&&x<DW&&y<DH)?dgrid[y*DW+x]:-1;};
-function noisy(P){const out=[];for(let i=0;i<P.length-1;i++){const a=P[i],b=P[i+1],dx=b[0]-a[0],dy=b[1]-a[1],L=Math.hypot(dx,dy),n=Math.max(1,Math.ceil(L/.5)),nx=-dy/L,ny=dx/L;
- for(let k=0;k<n;k++){const t=k/n,x=a[0]+dx*t,y=a[1]+dy*t,o=(fbm(x*.22+3,y*.22+9)-.5)*2.4+(vnoise(x*1.3,y*1.3)-.5)*.7;out.push([x+nx*o,y+ny*o]);}}
+function noisy(P){const out=[];for(let i=0;i<P.length-1;i++){const a=P[i],b=P[i+1],dx=b[0]-a[0],dy=b[1]-a[1],L=Math.hypot(dx,dy),n=Math.max(1,Math.ceil(L)),nx=-dy/L,ny=dx/L;
+ for(let k=0;k<n;k++){const t=k/n,x=a[0]+dx*t,y=a[1]+dy*t,o=(fbm(x*.11+3,y*.11+9)-.5)*4.8+(vnoise(x*.65,y*.65)-.5)*1.4;out.push([x+nx*o,y+ny*o]);}}
  out.push(P[P.length-1]);return out;}
 function buildMaps(){
  // pre-built land mask + district map (see PRE-BUILT ASSETS below); otherwise everything is drawn and classified live
  if(BAKED.land){land=BAKED.land;dgrid=BAKED.dist;landH=new Uint8Array(DW*DH);for(let gy=0;gy<DH;gy++)for(let gx=0;gx<DW;gx++)landH[gy*DW+gx]=land[(gy*2+1)*PW+gx*2+1];}else{
  const mc=document.createElement('canvas');mc.width=PW;mc.height=PH;const m=mc.getContext('2d');
  m.fillStyle='#000';m.fillRect(0,0,PW,PH);m.fillStyle='#fff';
- m.beginPath();m.moveTo(-2*S,-2*S);for(const p of noisy(COAST0))m.lineTo(p[0]*MS*S,p[1]*MS*S);m.lineTo(-2*S,(MH+3)*S);m.closePath();m.fill();
- FINGERS0.forEach((F,fi)=>{for(let t=0;t<=1.0001;t+=.008){const [x,y]=qb(F.p,t),r=(F.r[0]+(F.r[1]-F.r[0])*t)*(1+(vnoise(x*.9+fi*7,y*.9)-.5)*.42);m.beginPath();m.arc(x*MS*S,y*MS*S,r*MS*S,0,7);m.fill();}});
+ m.beginPath();m.moveTo(-2*S,-2*S);for(const p of noisy(COAST))m.lineTo(p[0]*S,p[1]*S);m.lineTo(-2*S,(MH+3)*S);m.closePath();m.fill();
+ FINGERS.forEach((F,fi)=>{for(let t=0;t<=1.0001;t+=.008){const [x,y]=qb(F.p,t),r=(F.r[0]+(F.r[1]-F.r[0])*t)*(1+(vnoise(x*.45+fi*7,y*.45)-.5)*.42);m.beginPath();m.arc(x*S,y*S,r*S,0,7);m.fill();}});
  ISLETS.forEach(i=>{m.beginPath();m.arc(i[0]*S,i[1]*S,i[2]*S,0,7);m.fill();});
  m.strokeStyle='#000';m.lineWidth=1.05*S;m.lineCap='round';m.lineJoin='round';
  CANALS.forEach(C=>{m.beginPath();C.forEach((p,i)=>i?m.lineTo(p[0]*S,p[1]*S):m.moveTo(p[0]*S,p[1]*S));m.stroke();});
@@ -725,7 +715,7 @@ function placeDistrictGrid(id){
   for(let li=0;li<k;li++)for(let lj=0;lj<k;lj++){
    const [x,y]=toXY(uc-bs/2+(li+.5)*L,vc-bs/2+(lj+.5)*L);
    if(!inD(x,y)||excluded(x,y))continue;
-   if(key==='fingers'&&x>86.6*MS)continue;
+   if(key==='fingers'&&x>173.2)continue;
    if(rand()>d.p){emptyLot(key,id,x,y,L,inD);continue;}
    let hw=L*d.f*R(.39,.5),hd=L*d.f*R(.39,.5);
    if(!fits(x,y,hw,hd,ca,sa,id)){hw*=.55;hd*=.55;if(!fits(x,y,hw,hd,ca,sa,id))continue;}
@@ -771,7 +761,7 @@ function harbour(){
    if(rand()<.35)LAMPS.push({x,y,h:.9,c:[1,.8,.45]});}
   (fi===0?[.6]:[.38,.72]).forEach((t,ci)=>{const [x,y]=qb(F.p,t),[tx,ty]=qbt(F.p,t),Lt=Math.hypot(tx,ty),sd=(fi+ci)%2?1:-1,nx=-ty/Lt*sd,ny=tx/Lt*sd,r0=(F.r[0]+(F.r[1]-F.r[0])*t)*.7;gantry(x+nx*r0*.55,y+ny*r0*.55,nx,ny,FNG);});
   const [ex,ey]=qb(F.p,1);LAMPS.push({x:ex,y:ey,h:.6,c:[1,.3,.25]});});
- [[107,51,.08],[110,63,-.25],[101,44.2,.35],[96.5,76,.6],[79,85.5,-.75],[88,80,.4]].forEach(s=>ship(s[0]*MS,s[1]*MS,s[2],R(4,5.2),R(.85,1)));
+ [[214,102,.08],[220,126,-.25],[202,88.4,.35],[193,152,.6],[158,171,-.75],[176,160,.4]].forEach(s=>ship(s[0],s[1],s[2],R(4,5.2),R(.85,1)));
  canalBoats();canalQuays();
  piersMarina();
 }
@@ -784,7 +774,7 @@ function construction(){const DE=new Set([ID.tin,ID.slag]),cand=[];
   box(PROP,x+nx*.5,y+ny*.5,1.6,.16,.3,rot,[.75,.42,.05],did);LAMPS.push({x:x+nx*.5,y:y+ny*.5,h:.45,c:[1,.55,.1]});
   if(rand()<.6)SKEL.push({x:x-nx*.9,y:y-ny*.9,w:R(1.2,2),dp:R(1.2,2),h:R(2,5.5),r:rot,c:[1,1,1],did});
   if(rand()<.22)crane(x-nx*.4,y-ny*.4,-ny,nx,did,.9);});}
-function woods(){for(let n=0;n<5200*MS*MS;n++){const x=R(0,MW),y=R(0,MH);if(distAt(x,y)!==OUT||!landAt(x,y)||excluded(x,y))continue;if(fbm(x*.11+7,y*.11+3)<.58)continue;addT(x,y,R(.45,.85),'o',OUT);}}
+function woods(){for(let n=0;n<20800;n++){const x=R(0,MW),y=R(0,MH);if(distAt(x,y)!==OUT||!landAt(x,y)||excluded(x,y))continue;if(fbm(x*.11+7,y*.11+3)<.58)continue;addT(x,y,R(.45,.85),'o',OUT);}}
 const domeG=new THREE.SphereGeometry(1,24,12,0,Math.PI*2,0,Math.PI/2);
 function dome(x,y,h,r,col,em){const m=new THREE.Mesh(domeG,new THREE.MeshLambertMaterial({color:col,emissive:em||0,emissiveIntensity:1}));m.scale.set(r,r*.85,r);m.position.set(x-MW/2,h,y-MH/2);m.castShadow=true;scene.add(m);}
 // ---------------- PART 2: LANDMARKS, BRIDGES, HARBOUR, WATER ----------------
@@ -1307,8 +1297,8 @@ vRf=vec3(position.z*rs.z,position.y*rs.y,0.);`).replace('#include <project_verte
 // ---------------- OUTSKIRTS TERRAIN: rolling hills + dense mixed forest ----------------
 function terrain(){
  // the terrain extends past the original map on the land sides (west & north) so hills can rise and fall gently
- const X0=-30*MS,Y0=-22*MS,X1=MW,Y1=MH,GW=(X1-X0)*2+1,GH=(Y1-Y0)*2+1,N=GW*GH,INF=1e9,dc=new Float32Array(N),dw=new Float32Array(N);let HF=new Float32Array(N);
- const inMap=(x,y)=>x>=0&&y>=0&&x<MW&&y<MH,landX=(x,y)=>inMap(x,y)?landAt(x,y):!(y<0&&x>97*MS);
+ const X0=-60,Y0=-44,X1=MW,Y1=MH,GW=(X1-X0)*2+1,GH=(Y1-Y0)*2+1,N=GW*GH,INF=1e9,dc=new Float32Array(N),dw=new Float32Array(N);let HF=new Float32Array(N);
+ const inMap=(x,y)=>x>=0&&y>=0&&x<MW&&y<MH,landX=(x,y)=>inMap(x,y)?landAt(x,y):!(y<0&&x>194);
  // distance (in half-units) to the nearest city cell and to the nearest water
  for(let gy=0;gy<GH;gy++)for(let gx=0;gx<GW;gx++){const i=gy*GW+gx,x=Math.min(X0+gx*.5,MW-.01),y=Math.min(Y0+gy*.5,MH-.01),l=landX(x,y);dw[i]=l?INF:0;dc[i]=(inMap(x,y)&&l&&distAt(x,y)!==OUT)?0:INF;}
  const dt=a=>{for(let gy=0;gy<GH;gy++)for(let gx=0;gx<GW;gx++){const i=gy*GW+gx;let v=a[i];if(gx>0)v=Math.min(v,a[i-1]+1);if(gy>0){v=Math.min(v,a[i-GW]+1);if(gx>0)v=Math.min(v,a[i-GW-1]+1.414);if(gx<GW-1)v=Math.min(v,a[i-GW+1]+1.414);}a[i]=v;}
@@ -1328,14 +1318,13 @@ function terrain(){
  // ---- country roads: hand-routed winding roads from the city's edge out through the hills (replace the straight rural grid)
  D[OUT].st=[1000,.15,-600]; // pushes the old rural street lines far off the map, so the ground shader draws none
  const SPINES=[
-  [[9,61.4],[4.5,59],[-1,55.5],[-7,52],[-15,49.5],[-22,47.5],[-29.5,46]],
-  [[10,40.6],[7,36.5],[8,31.5],[12.5,29.8],[18,30],[24.5,29.6],[28,25],[31,21.6],[37,19.5],[42.5,16.5],[45,9],[47,1],[51,-8],[55,-21.5]],
-  [[52.6,21.6],[51,16.5],[47.5,12],[45,9]],
-  [[-1,55.5],[-4.5,48],[-3.5,40.5],[2,34],[7,31.8]],
-  [[8,31.5],[5,25],[3,17],[-1,9],[-6,4],[-14,-2],[-24,-12],[-29.5,-18]],
-  [[79,26.5],[80.5,20],[84,13],[88,6],[90,-2],[89,-12],[86,-21.5]],
-  [[11,69.5],[5.5,72.5],[0,77],[-7,81.5],[-16,85],[-29.5,87.5]]];
- if(MS!==1)SPINES.forEach(sp=>sp.forEach(p=>{p[0]*=MS;p[1]*=MS;}));
+  [[18,122.8],[9,118],[-2,111],[-14,104],[-30,99],[-44,95],[-59,92]],
+  [[20,81.2],[14,73],[16,63],[25,59.6],[36,60],[49,59.2],[56,50],[62,43.2],[74,39],[85,33],[90,18],[94,2],[102,-16],[110,-43]],
+  [[105.2,43.2],[102,33],[95,24],[90,18]],
+  [[-2,111],[-9,96],[-7,81],[4,68],[14,63.6]],
+  [[16,63],[10,50],[6,34],[-2,18],[-12,8],[-28,-4],[-48,-24],[-59,-36]],
+  [[158,53],[161,40],[168,26],[176,12],[180,-4],[178,-24],[172,-43]],
+  [[22,139],[11,145],[0,154],[-14,163],[-32,170],[-59,175]]];
  const ROADS=[],RG=new Set(),ck=(x,y)=>Math.round(x*2)+','+Math.round(y*2);
  SPINES.forEach((sp,si)=>{const cv=new THREE.CatmullRomCurve3(sp.map(p=>new THREE.Vector3(p[0],0,p[1]))),n=Math.ceil(cv.getLength()/.25),raw=cv.getSpacedPoints(n),pts=[];
   raw.forEach((v,k)=>{const a=raw[Math.max(0,k-1)],b=raw[Math.min(n,k+1)],dx=b.x-a.x,dz=b.z-a.z,L=Math.hypot(dx,dz)||1,s=k*.25,
@@ -1380,7 +1369,7 @@ function terrain(){
  // dense forest: noise-driven density, pines more likely higher up, clearings left for fields, roads and estates kept free
  const estates=BODY.filter(b=>b.did===OUT).map(b=>[b.x,b.y]),[s0,a0,sw0]=D[OUT].st,ca=Math.cos(a0),sa=Math.sin(a0),CONES=[];
  const onRoad=(x,y)=>{const u=x*ca+y*sa,v=-x*sa+y*ca,du=((u%s0)+s0)%s0,dv=((v%s0)+s0)%s0;return du<sw0+.22||dv<sw0+.22||du>s0-.22||dv>s0-.22;};
- for(let q=0;q<52000*MS*MS;q++){const x=R(X0,X1),y=R(Y0,Y1);if(inMap(x,y)?(distAt(x,y)!==OUT||!landAt(x,y)):!landX(x,y))continue;
+ for(let q=0;q<208000;q++){const x=R(X0,X1),y=R(Y0,Y1);if(inMap(x,y)?(distAt(x,y)!==OUT||!landAt(x,y)):!landX(x,y))continue;
   const f=fbm(x*.07+3,y*.07+17),dens=f<.2?.12:1;if(rand()>dens)continue; // wooded almost everywhere, a few small meadows
   if(onRoad(x,y)||roadDist(x,y)<.4||excluded(x,y)||DG.has(ck(x,y))||estates.some(e=>(e[0]-x)**2+(e[1]-y)**2<2.6))continue;
   if(rand()<.35+Math.min(.5,hAt(x,y)/10)){const s=R(.28,.5);CONES.push({x,y,w:s*2,dp:s*2,h:s*R(3.2,4.6),r:rand()*6,c:n01(mix([18,54,32],[34,84,44],rand())),y0:.14});
@@ -1391,7 +1380,7 @@ function terrain(){
  for(const L of [BODY,PROP,ROOF,CYL,NEON,NCYL,SKEL])L.forEach(b=>{const h=foot(b.x,b.y);if(h>0)b.y0=(b.y0||0)+h-.03;});
  for(const L of [TREES,CONES])L.forEach(b=>{const h=hAt(b.x,b.y);if(h>0)b.y0+=h-.05;});
  for(const L of [LAMPS,BEAC])L.forEach(b=>{const h=hAt(b.x,b.y);if(h>0)b.h+=h;});
- LM.forEach(l=>{const h=foot(l.x,l.y);if(h>0)l.top+=h;});D[OUT].lh=hAt(24*MS,15*MS)+4;
+ LM.forEach(l=>{const h=foot(l.x,l.y);if(h>0)l.top+=h;});D[OUT].lh=hAt(48,30)+4;
  // clear garden trees off the driveways, then lay the driveway ribbons (draped on the terrain) with lamp posts
  for(let i=TREES.length-1;i>=0;i--)if(TREES[i].did===OUT&&DG.has(ck(TREES[i].x,TREES[i].y)))TREES.splice(i,1);
  const dpos=[],didx=[];
@@ -1516,7 +1505,7 @@ function piersMarina(){const P=PROM;if(!P||P.length<4)return;
   if(kind==='grand'){for(const sd of [-1,1])box(NEON,sx+nx*L/2+tx*sd*JW/2,sy+ny*L/2+ty*sd*JW/2,L,.03,.03,r,[1,.4,.8],PIERS,DY+.25);
    const ax=sx+nx*L*.45,ay=sy+ny*L*.45;box(BODY,ax,ay,1.4,.75,.6,r,[.35,.12,.3],PIERS,DY+.05,{win:[.9,2,.25]});box(ROOF,ax,ay,1.45,.8,.35,r,[.2,.1,.18],PIERS,DY+.65);
    outline(ax,ay,1.4,.75,DY+.65,r,[1,.45,.85],PIERS,.05);ferris(ex-nx*.9,ey-ny*.9,nx,ny);}};
- let gi=0,gb=1e9;P.forEach((q,i)=>{const d=Math.hypot(q[0]-60*MS,q[1]-84.5*MS);if(d<gb){gb=d;gi=i;}});const gs=acc[gi];
+ let gi=0,gb=1e9;P.forEach((q,i)=>{const d=Math.hypot(q[0]-120,q[1]-169);if(d<gb){gb=d;gi=i;}});const gs=acc[gi];
  let n=0;for(let s=1.2;s<total-.8;s+=R(2.3,3)){if(Math.abs(s-gs)<2.2)continue;jetty(ptAt(s),n++%3===1?'rest':'marina');}
  jetty(ptAt(gs),'grand');
  // yachts riding at anchor out in the bay
@@ -1530,7 +1519,7 @@ function cargoDocks(){
  for(let i=PROP.length-1;i>=0;i--){const b=PROP[i];if(b.did===FNG&&b.w===.82&&b.dp===.32)PROP.splice(i,1);} // old random container rows
  const YEL=[.85,.7,.12],STEEL=[.25,.25,.28];
  FINGERS.forEach(F=>{
-  const N=Math.round(40*MS),S=[];
+  const N=80,S=[];
   for(let k=0;k<=N;k++){const t=.06+.9*k/N,[x,y]=qb(F.p,t),[tx,ty]=qbt(F.p,t),L=Math.hypot(tx,ty);S.push({x,y,ux:tx/L,uy:ty/L,nx:-ty/L,ny:tx/L,r:(F.r[0]+(F.r[1]-F.r[0])*t)*.92});}
   // quay edges: yellow safety line, two crane rails, bollards
   for(let k=0;k<N;k++){const a=S[k],b=S[k+1],len=Math.hypot(b.x-a.x,b.y-a.y),rot=-Math.atan2(b.y-a.y,b.x-a.x),nx=(a.nx+b.nx)/2,ny=(a.ny+b.ny)/2,rr=(a.r+b.r)/2;
@@ -1549,14 +1538,14 @@ function cargoDocks(){
   for(let q=0;q<2;q++){const a=S[6+(rand()*(N-12)|0)],o=R(-.3,.3)*a.r,rot=-Math.atan2(a.uy,a.ux),cx=a.x+a.nx*o,cy=a.y+a.ny*o;if(!landAt(cx,cy))continue;
    for(const sd of [-1,1])box(PROP,cx+a.nx*sd*.14,cy+a.ny*sd*.14,.36,.04,.5,rot,YEL,FNG);box(PROP,cx,cy,.36,.32,.06,rot,YEL,FNG,.5);LAMPS.push({x:cx,y:cy,h:.6,c:[1,.6,.15]});}});
  // rail yard along the palm: two tracks, a container train
- const RC=84.85*MS,RX=[RC-.2,RC+.2],RY=48.5*MS;
- for(const L of [BODY,ROOF,LAMPS])for(let i=L.length-1;i>=0;i--){const b=L[i];if((b.did===FNG||L===LAMPS)&&b.x>RC-.6&&b.x<RC+.6&&b.y>RY-.3&&b.y<63.6*MS)L.splice(i,1);}
- for(const x of RX)for(const o of [-.035,.035])box(PROP,x+o,55.9*MS,.018,15.2*MS,.02,0,[.4,.38,.36],FNG,.005);
- for(let y=RY;y<63.4*MS;y+=.18)for(const x of RX)box(PROP,x,y,.13,.035,.01,0,[.24,.18,.14],FNG);
+ const RC=169.7,RX=[RC-.2,RC+.2],RY=97;
+ for(const L of [BODY,ROOF,LAMPS])for(let i=L.length-1;i>=0;i--){const b=L[i];if((b.did===FNG||L===LAMPS)&&b.x>RC-.6&&b.x<RC+.6&&b.y>RY-.3&&b.y<127.2)L.splice(i,1);}
+ for(const x of RX)for(const o of [-.035,.035])box(PROP,x+o,111.8,.018,30.4,.02,0,[.4,.38,.36],FNG,.005);
+ for(let y=RY;y<126.8;y+=.18)for(const x of RX)box(PROP,x,y,.13,.035,.01,0,[.24,.18,.14],FNG);
  box(PROP,RX[0],RY+2.1,.15,.42,.18,0,[.85,.55,.1],FNG,.02);LAMPS.push({x:RX[0],y:RY+1.88,h:.15,c:[1,1,.9]});
  for(let k=0;k<12;k++){const y=RY+2.6+k*.47;box(PROP,RX[0],y,.14,.42,.05,0,[.22,.22,.24],FNG,.03);if(rand()<.85)box(PROP,RX[0],y,.14,.4,.15,0,pick(CPAL2),FNG,.08);}
  // tugboats working near the finger tips
- [[103.8,53.8,1.2],[96,65.2,-.6],[92,46.3,.2]].forEach(([x,y,a])=>{x*=MS;y*=MS;if(landAt(x,y))return;const ux=Math.cos(a),uy=Math.sin(a);
+ [[207.6,107.6,1.2],[192,130.4,-.6],[184,92.6,.2]].forEach(([x,y,a])=>{if(landAt(x,y))return;const ux=Math.cos(a),uy=Math.sin(a);
   hullMesh(x,y,-a,.8,.32,.18,-.03,0x8a1c1c);box(PROP,x-ux*.05,y-uy*.05,.3,.22,.18,-a,[.95,.95,.95],FNG,.15);box(CYL,x-ux*.18,y-uy*.18,.08,.08,.2,0,[.1,.1,.1],FNG,.3);
   LAMPS.push({x,y,h:.45,c:[1,1,.95]},{x:x+ux*.38,y:y+uy*.38,h:.2,c:[1,.85,.5]});});}
 // ---------------- THE TIN YARD: abandoned factories, dead malls, run-down markets, derelict lots ----------------
@@ -1638,11 +1627,11 @@ function tinYard(){
   if(rand()<.35){const [px,py]=toXY(bu0-sw*.5+.05,R(bv0,bv1));barrel(px,py);}}}
 // ---------------- LITTLE VENICE: rii, campo & campanile, terracotta rooftops, footbridges, gondolas ----------------
 // narrow side canals branching off the end of the main canal (one loop forms the campo island)
-const RII=[[[60.6,45.3],[58.6,45.55],[56.6,45.1],[55.4,44.6]],[[59.4,45.45],[59.2,44.2],[58.4,43.1]],[[56.6,45.1],[56.9,43.7],[58.4,43.1],[59.9,42.6]],[[57.6,45.4],[57.4,46.5]]].map(C=>C.map(p=>[p[0]*MS,p[1]*MS]));
+const RII=[[[121.2,90.6],[117.2,91.1],[113.2,90.2],[110.8,89.2]],[[118.8,90.9],[118.4,88.4],[116.8,86.2]],[[113.2,90.2],[113.8,87.4],[116.8,86.2],[119.8,85.2]],[[115.2,90.8],[114.8,93]]];
 let GONG=null;
 function gondGeo(){if(GONG)return GONG;const s=new THREE.Shape();s.moveTo(-.5,0);s.quadraticCurveTo(0,-.62,.5,0);s.quadraticCurveTo(0,.62,-.5,0);
  const g=new THREE.ExtrudeGeometry(s,{depth:1,bevelEnabled:false,curveSegments:10});g.rotateX(-Math.PI/2);g.computeVertexNormals();return GONG=g;}
-function littleVenice(){gondGeo();const id=ID.lv,did=id,STONE=[.85,.83,.78],TERR=[.62,.3,.2],CX=58.1*MS,CY=44.3*MS;
+function littleVenice(){gondGeo();const id=ID.lv,did=id,STONE=[.85,.83,.78],TERR=[.62,.3,.2],CX=116.2,CY=88.6;
  // clear the campo, and drop the generic rooftop water tanks
  for(const L of [BODY,ROOF,CYL,PROP,NEON,TREES])for(let i=L.length-1;i>=0;i--){const b=L[i];if(b.did!==id)continue;
   if(Math.hypot(b.x-CX,b.y-CY)<1.25||(L===CYL&&b.w===.36)||(L===PROP&&b.w===.3&&b.dp===.3&&b.h===.15))L.splice(i,1);}
@@ -1696,7 +1685,7 @@ function flatTex(draw,size,rep){const c=document.createElement('canvas');c.width
 function groundPlane(x,y,w,tex){const m=new THREE.Mesh(new THREE.PlaneGeometry(w,w),new THREE.MeshLambertMaterial({map:tex,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2}));
  m.rotation.x=-Math.PI/2;m.position.set(x-MW/2,.025,y-MH/2);m.receiveShadow=true;scene.add(m);}
 function palm(x,y,id,h){h=h||R(.7,.95);box(CYL,x,y,.045,.045,h,0,[.42,.32,.22],id);TREES.push({x,y,w:.62,dp:.62,h:.16,r:rand()*6,c:[.14,.46,.2],did:id,y0:h});}
-function littleRio(){const id=ID.lr,CX=57*MS,CY=37.6*MS,VIV=[[.95,.75,.2],[.2,.65,.5],[.95,.4,.3],[.25,.6,.85],[.9,.35,.55],[.6,.8,.3]];
+function littleRio(){const id=ID.lr,CX=114,CY=75.2,VIV=[[.95,.75,.2],[.2,.65,.5],[.95,.4,.3],[.25,.6,.85],[.9,.35,.55],[.6,.8,.3]];
  clearSquare(id,CX,CY,1.05);
  BODY.filter(b=>b.did===id&&b.y0<.01).forEach(b=>{const w=b.w,dp=b.dp,h=b.h;
   // laje roofs: parapet rim, the blue water tank, sometimes an added room on top, laundry lines
@@ -1720,7 +1709,7 @@ function littleRio(){const id=ID.lr,CX=57*MS,CY=37.6*MS,VIV=[[.95,.75,.2],[.2,.6
  box(PROP,CX-.45,CY+.35,.34,.34,.34,0,[.15,.5,.32],id);box(ROOF,CX-.45,CY+.35,.42,.42,.18,0,[.15,.45,.3],id,.34);box(ROOF,CX-.45,CY+.35,.42,.42,.18,Math.PI/2,[.15,.45,.3],id,.34);
  for(const [ox,oy] of [[.35,.15],[.5,.55],[.05,.6]]){const tx=CX+ox,ty=CY+oy;box(CYL,tx,ty,.12,.12,.1,0,[.92,.92,.9],id);box(CYL,tx,ty,.015,.015,.3,0,[.6,.6,.6],id,.1);box(CYL,tx,ty,.32,.32,.025,0,pick(VIV),id,.38);}
  for(let k=0;k<12;k++){const a=k/12*6.283;LAMPS.push({x:CX+Math.cos(a)*.9,y:CY+Math.sin(a)*.9,h:.62,c:pick([[1,.8,.5],[1,.55,.4],[.9,.9,.6]])});}}
-function littlePalma(){const id=ID.lp,CX=62.5*MS,CY=40.5*MS,TERR=[.66,.36,.24],WHT=[.93,.91,.87],BOUG=[[.82,.18,.55],[.9,.3,.65],[.62,.22,.7],[.95,.45,.7]];
+function littlePalma(){const id=ID.lp,CX=125,CY=81,TERR=[.66,.36,.24],WHT=[.93,.91,.87],BOUG=[[.82,.18,.55],[.9,.3,.65],[.62,.22,.7],[.95,.45,.7]];
  clearSquare(id,CX,CY,1.05);
  BODY.filter(b=>b.did===id&&b.y0<.01).forEach(b=>{const w=b.w,dp=b.dp,h=b.h;
   // half get low terracotta roofs, half flat terraces with white parapets (some with a pergola and potted plants)
@@ -2279,7 +2268,7 @@ function harbourPlus(){
  lighthouse();cargoDocks();}
 // ---------------- THE CANALS: factories on the water, quays, street bridges, barges ----------------
 // factories line the water on the industrial (east) stretch; further from the canal / toward Little Venice it turns residential
-function canalStyle(x,y){return x>67*MS&&Math.min(polyDist(x,y,CANALS[0]),polyDist(x,y,CANALS[1]))<2.6?'factory':'apt';}
+function canalStyle(x,y){return x>134&&Math.min(polyDist(x,y,CANALS[0]),polyDist(x,y,CANALS[1]))<2.6?'factory':'apt';}
 let ARCHG=null;
 function archGeo(){if(ARCHG)return ARCHG;const s=new THREE.Shape();s.moveTo(-.75,0);s.lineTo(-.75,.24);s.quadraticCurveTo(0,.36,.75,.24);s.lineTo(.75,0);s.lineTo(.5,0);s.quadraticCurveTo(0,.42,-.5,0);s.closePath();
  const g=new THREE.ExtrudeGeometry(s,{depth:.48,bevelEnabled:false,curveSegments:16});g.translate(0,0,-.24);g.computeVertexNormals();return ARCHG=g;}
@@ -2308,7 +2297,7 @@ function bridges(){const BR=[],M=CANALS[0];
    for(let li=Math.ceil((Math.min(fa,fb)-P.sw/2)/P.s);li*P.s+P.sw/2<=Math.max(fa,fb);li++){if(gMiss(P,li,fam?50:0))continue;
     const t=(li*P.s+P.sw/2-fa)/(fb-fa);if(t<=0||t>=1)continue;const x=a[0]+dx*t,y=a[1]+dy*t;
     if(landAt(x,y)||!landAt(x+nx*.95,y+ny*.95)||!landAt(x-nx*.95,y-ny*.95)||BR.some(q=>Math.hypot(q[0]-x,q[1]-y)<1.4))continue;
-    BR.push([x,y]);canalBridge(x,y,nx,ny,distAt(x,y),x>67*MS);}}}});}
+    BR.push([x,y]);canalBridge(x,y,nx,ny,distAt(x,y),x>134);}}}});}
 // stone quay walls with coping, bollards, lamp posts, small loading cranes on the industrial stretch
 function canalQuays(){const wp=[],wi=[],cp=[],ci=[],did=ID.canals;
  CANALS.forEach(C=>{const pts=[];
@@ -2321,7 +2310,7 @@ function canalQuays(){const wp=[],wi=[],cp=[],ci=[],did=ID.canals;
      cp.push(prev[0]-MW/2,.14,prev[1]-MH/2,prev[0]+prev[2]*o-MW/2,.14,prev[1]+prev[3]*o-MH/2,bx-MW/2,.14,by-MH/2,bx+nx*o-MW/2,.14,by+ny*o-MH/2);ci.push(c0,c0+2,c0+1,c0+1,c0+2,c0+3);}
     prev=[bx,by,nx,ny];
     if(k%4===0)box(CYL,bx+nx*.05,by+ny*.05,.045,.045,.09,0,[.08,.08,.09],did,.14);
-    if(p[0]<67*MS&&k%2===1)box(CYL,bx+nx*.03,by+ny*.03,.015,.015,.2,0,[.1,.1,.11],did,.14);
+    if(p[0]<134&&k%2===1)box(CYL,bx+nx*.03,by+ny*.03,.015,.015,.2,0,[.1,.1,.11],did,.14);
     if(k%9===0){const lx=bx+nx*.09,ly=by+ny*.09;box(CYL,lx,ly,.025,.025,.5,0,[.12,.12,.13],did,.14);LAMPS.push({x:lx,y:ly,h:.66,c:[1,.78,.45]});}
 }}});
  const mk=(p,i,col)=>{const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(p,3));g.setIndex(i);g.computeVertexNormals();
@@ -2331,7 +2320,7 @@ function canalQuays(){const wp=[],wi=[],cp=[],ci=[],did=ID.canals;
 function canalBoats(){const did=ID.canals,BC=[0x2a2420,0x1d2a33,0x3a2a1e,0x24302a,0x4a2a22];
  CANALS.forEach(C=>{const pts=[];
   for(let i=0;i<C.length-1;i++){const a=C[i],b=C[i+1],L=Math.hypot(b[0]-a[0],b[1]-a[1]),ux=(b[0]-a[0])/L,uy=(b[1]-a[1])/L;for(let s=0;s<L;s+=.25)pts.push([a[0]+ux*s,a[1]+uy*s,ux,uy]);}
-  for(let k=4;k<pts.length-4;){const p=pts[k],type=p[0]<68*MS?(rand()<.6?'taxi':'barge'):(rand()<.75?'barge':'taxi'),moored=rand()<.7,off=moored?(rand()<.5?-.3:.3):R(-.08,.08),
+  for(let k=4;k<pts.length-4;){const p=pts[k],type=p[0]<136?(rand()<.6?'taxi':'barge'):(rand()<.75?'barge':'taxi'),moored=rand()<.7,off=moored?(rand()<.5?-.3:.3):R(-.08,.08),
     head=Math.atan2(p[3],p[2])+(rand()<.5?0:Math.PI),x=p[0]-p[3]*off,y=p[1]+p[2]*off,L=type==='barge'?R(1.3,1.9):R(.6,.85),ux=Math.cos(head),uy=Math.sin(head);
    if(rand()<.62||landAt(x,y)||landAt(x+ux*L/2,y+uy*L/2)||landAt(x-ux*L/2,y-uy*L/2)){k+=3;continue;}
    const r=-head,at=(a,o)=>[x+ux*a-uy*o,y+uy*a+ux*o];
@@ -2355,18 +2344,15 @@ function bigBridge(x,y,nx,ny,ux,uy,r,did){box(PROP,x,y,2.8,.75,.12,r,[.18,.18,.2
 // ---------------- STREETS: arterial network + procedural street shader ----------------
 // width < 0 = boulevard with a planted median
 const ARTS=[
- {name:'Grand Avenue',w:-.95,p:[[52.6,31.8],[51.2,37],[49.6,44],[47.8,51],[47.5,57.5],[49.2,62.9]]},
- {name:'Grand Avenue South',w:-.95,p:[[50.3,68.6],[47.6,72.5],[45.6,77],[45.2,83],[44.8,90.8]]},
- {name:'Crosstown West',w:.85,p:[[9,61.4],[18,62.6],[27,63.3],[36,63.6],[43,64.2],[48.7,65]]},
- {name:'Crosstown East',w:.85,p:[[55.3,64.3],[60.5,61.5],[66,60],[72,59.3],[76.5,60.5],[81.2,58.8]]},
- {name:'Northern Parkway',w:.8,p:[[10,40.6],[22,41],[30.5,40.2],[39.5,38.6],[45.5,37.4],[51.2,36.2],[58,33.4],[66,31.2],[75,30.6],[84,32],[89.8,33.6]]},
- {name:'Pier Avenue',w:.8,p:[[76.5,60.5],[76.5,63.6],[72.3,67],[67.3,71],[62.3,76],[57.3,81],[54,85.4],[52.6,90.8]]},
- {name:'Tin Yard Road',w:.7,p:[[11,69.5],[20,72.5],[27,78.5],[31.5,85],[33,90.8]]},
- {name:'Dock Road',w:.7,p:[[82.6,48.6],[82.8,63.2]]}];
-const RB=[52,65.5,3.35,.85]; // Velvets roundabout: cx, cy, radius, width
-// size preview: arterials follow the enlarged layout; the ends that met the roundabout are pulled back onto its ring (which keeps its size)
-if(MS!==1){ARTS.forEach(a=>a.p.forEach(p=>{const dx=p[0]-RB[0],dy=p[1]-RB[1],d=Math.hypot(dx,dy);
- if(d<4.5){p[0]=RB[0]*MS+dx/d*(RB[2]+.15);p[1]=RB[1]*MS+dy/d*(RB[2]+.15);}else{p[0]*=MS;p[1]*=MS;}}));RB[0]*=MS;RB[1]*=MS;}
+ {name:'Grand Avenue',w:-.95,p:[[105.2,63.6],[102.4,74],[99.2,88],[95.6,102],[95,115],[101.435223,128.618421]]},
+ {name:'Grand Avenue South',w:-.95,p:[[102.317086,134.068843],[95.2,145],[91.2,154],[90.4,166],[89.6,181.6]]},
+ {name:'Crosstown West',w:.85,p:[[18,122.8],[36,125.2],[54,126.6],[72,127.2],[86,128.4],[100.539496,130.475681]]},
+ {name:'Crosstown East',w:.85,p:[[107.289277,129.803899],[121,123],[132,120],[144,118.6],[153,121],[162.4,117.6]]},
+ {name:'Northern Parkway',w:.8,p:[[20,81.2],[44,82],[61,80.4],[79,77.2],[91,74.8],[102.4,72.4],[116,66.8],[132,62.4],[150,61.2],[168,64],[179.6,67.2]]},
+ {name:'Pier Avenue',w:.8,p:[[153,121],[153,127.2],[144.6,134],[134.6,142],[124.6,152],[114.6,162],[108,170.8],[105.2,181.6]]},
+ {name:'Tin Yard Road',w:.7,p:[[22,139],[40,145],[54,157],[63,170],[66,181.6]]},
+ {name:'Dock Road',w:.7,p:[[165.2,97.2],[165.6,126.4]]}];
+const RB=[104,131,3.35,.85]; // Velvets roundabout: cx, cy, radius, width
 function roadDist(x,y){let m=Math.abs(Math.hypot(x-RB[0],y-RB[1])-RB[2])-RB[3]/2;
  ARTS.forEach(a=>{for(let i=0;i<a.p.length-1;i++){const d=segDist(x,y,a.p[i][0],a.p[i][1],a.p[i+1][0],a.p[i+1][1])-Math.abs(a.w)/2;if(d<m)m=d;}});return m;}
 function arterialsPre(){ARTS.forEach(a=>{for(let i=0;i<a.p.length-1;i++)EXC.push({s:[a.p[i][0],a.p[i][1],a.p[i+1][0],a.p[i+1][1]],r:Math.abs(a.w)/2+.32});});
@@ -2387,7 +2373,7 @@ function generate(){
 // per-pixel street renderer: asphalt, sidewalks, centre lines, crosswalks, lit pools at night; arterials with lanes/medians
 const STREET_HEAD='uniform sampler2D tDist;uniform vec4 uG[19];uniform vec4 uK[19];uniform vec3 uSN[19];uniform vec4 uSeg[48];uniform vec4 uSWv[12];uniform float uNS;uniform vec4 uRb;\n'+
  'float ln(float d,float w,float px){float W=max(w,px*.7);return (1.-smoothstep(W-px*.5,W+px*.5,d))*min(1.,w/W*1.6);}\n';
-const STREET_GLSL=`{vec2 mp=vec2(vUv.x*120.,(1.-vUv.y)*90.);float px=max(length(fwidth(mp))*.75,1e-4);
+const STREET_GLSL=`{vec2 mp=vec2(vUv.x*240.,(1.-vUv.y)*180.);float px=max(length(fwidth(mp))*.75,1e-4);
 vec4 di=texture2D(tDist,vUv);float fid=floor(di.r*255.+.5);
 vec4 G=vec4(1.,0.,9.,0.),K=vec4(0.);vec3 SN=vec3(0.);
 for(int i=0;i<19;i++){if(abs(float(i)-fid)<.5){G=uG[i];K=uK[i];SN=uSN[i];}}
@@ -2430,7 +2416,7 @@ diffuseColor.rgb=col;totalEmissiveRadiance=em;}`;
 // 5 cracked & weedy dead ground, 6 lush garden beds (Greenway), 7 wooden boardwalk decks with pools (Piers)
 const BLOCK_HEAD='uniform vec4 uB[19];\nfloat vh(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}\n'+
  'float vn(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(vh(i),vh(i+vec2(1.,0.)),f.x),mix(vh(i+vec2(0.,1.)),vh(i+vec2(1.,1.)),f.x),f.y);}\n';
-const BLOCK_GLSL=`{vec2 mp=vec2(vUv.x*120.,(1.-vUv.y)*90.);
+const BLOCK_GLSL=`{vec2 mp=vec2(vUv.x*240.,(1.-vUv.y)*180.);
 if(vUv.x>0.&&vUv.x<1.&&vUv.y>0.&&vUv.y<1.){
 float px=max(length(fwidth(mp))*.75,1e-4);vec4 di=texture2D(tDist,vUv);float fid=floor(di.r*255.+.5);
 vec4 G=vec4(1.,0.,9.,0.),B=vec4(0.);
@@ -2513,7 +2499,6 @@ function streetShader(s){
   .replace(' totalEmissiveRadiance+=e*(1.-uDay);',' {vec3 SNb=vec3(0.);for(int wi=0;wi<19;wi++){if(abs(float(wi)-fid)<.5)SNb=uSN[wi];}float ax=mod(u-sw*.5+s*.5,s)-s*.5,bx=mod(v-sw*.5+s*.5,s)-s*.5;'+
    'totalEmissiveRadiance=totalEmissiveRadiance*.35+(SNb*.18*exp(-(ax*ax+bx*bx)*1.5)+e)*(1.-uDay);}');
  s.fragmentShader=GRID_HEAD+BLOCK_HEAD+STREET_HEAD+s.fragmentShader.replace('#include <emissivemap_fragment>','#include <emissivemap_fragment>\n'+BG+'\n'+SG);
- s.fragmentShader=s.fragmentShader.split('vUv.x*120.,(1.-vUv.y)*90.').join('vUv.x*'+MW+'.,(1.-vUv.y)*'+MH+'.'); // map size in the ground shaders
  // Low quality: skip the block paving/garden patterns and the painted road markings (a uniform, so switching quality needs no recompile)
  s.uniforms.uLo=LOQ;
  let F='uniform float uLo;uniform sampler2D tArt;\n'+s.fragmentShader
@@ -2598,7 +2583,7 @@ function glowTex(stops,size){const c=document.createElement('canvas');c.width=c.
 // ---------------- ASSEMBLE ----------------
 let slab,oc,otex,VW=1,VH=1,beacMat,DIMS=[];
 const LABELS=[],SPOTS=[];let SEL=new Set(),showLabels=true,showLM=true,autoRot=false,fly=null;
-const RMAX=240*MS,target=new THREE.Vector3(-2*MS,0,7*MS);let theta=0,phi=.92,radius=115*MS;
+const RMAX=480,target=new THREE.Vector3(-4,0,14);let theta=0,phi=.92,radius=230;
 let bodyM;
 function assemble(){
  const tex=new THREE.CanvasTexture(buildTexture());tex.anisotropy=renderer.capabilities.getMaxAnisotropy();
@@ -2610,8 +2595,8 @@ function assemble(){
  const ov=document.createElement('canvas');ov.width=DW;ov.height=DH;oc=ov.getContext('2d');otex=new THREE.CanvasTexture(ov);
  const ovl=new THREE.Mesh(new THREE.PlaneGeometry(MW,MH),new THREE.MeshBasicMaterial({map:otex,transparent:true,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2}));
  ovl.rotation.x=-Math.PI/2;ovl.position.y=.05;ovl.renderOrder=2;scene.add(ovl);
- const haze=(x,y,s,col,op)=>{x*=MS;y*=MS;s*=MS;const m=new THREE.Mesh(new THREE.PlaneGeometry(s,s),new THREE.MeshBasicMaterial({map:glowTex([[0,col],[1,'rgba(0,0,0,0)']],128),transparent:true,opacity:op,blending:THREE.AdditiveBlending,depthWrite:false}));m.rotation.x=-Math.PI/2;m.position.set(x-MW/2,.09,y-MH/2);scene.add(m);};
- haze(50,68,52,'rgba(255,61,165,1)',.38);haze(55,53.5,22,'rgba(57,224,122,1)',.28);haze(29,44,30,'rgba(61,224,255,1)',.16);haze(90,56,26,'rgba(255,174,61,1)',.16);
+ const haze=(x,y,s,col,op)=>{const m=new THREE.Mesh(new THREE.PlaneGeometry(s,s),new THREE.MeshBasicMaterial({map:glowTex([[0,col],[1,'rgba(0,0,0,0)']],128),transparent:true,opacity:op,blending:THREE.AdditiveBlending,depthWrite:false}));m.rotation.x=-Math.PI/2;m.position.set(x-MW/2,.09,y-MH/2);scene.add(m);};
+ haze(100,136,104,'rgba(255,61,165,1)',.38);haze(110,107,44,'rgba(57,224,122,1)',.28);haze(58,88,60,'rgba(61,224,255,1)',.16);haze(180,112,52,'rgba(255,174,61,1)',.16);
  generate();
  const bg=new THREE.BoxGeometry(1,1,1);bg.translate(0,.5,0);
  bodyM=inst(BODY,bg.clone(),winMaterial(),true,true);
@@ -2651,7 +2636,7 @@ function assemble(){
 // ---------------- SELECTION / OVERLAY ----------------
 const ENC=[ID.lr,ID.lv,ID.lp];
 function centroidOf(ids){let n=0,sx=0,sy=0,x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;ids.forEach(i=>{const s=ST[i];n+=s.n;sx+=s.sx;sy+=s.sy;x0=Math.min(x0,s.x0);y0=Math.min(y0,s.y0);x1=Math.max(x1,s.x1);y1=Math.max(y1,s.y1);});
- return{x:sx/n,y:sy/n,r:clamp(Math.max(x1-x0,y1-y0)*1.9,30,125*MS)};}
+ return{x:sx/n,y:sy/n,r:clamp(Math.max(x1-x0,y1-y0)*1.9,30,250)};}
 function drawOverlay(){const im=oc.createImageData(DW,DH),p=im.data,N=DW*DH;
  if(SEL.size){const first=[...SEL][0],c=hx(SEL.size>1&&!SEL.has(ID.lr)?GROUPS[D[first].g].col:D[first].col);
   for(let i=0;i<N;i++){if(!landH[i])continue;const o=i*4;
@@ -2699,7 +2684,7 @@ $('legendBtn').onclick=()=>legend.classList.toggle('open');
 
 // ---------------- LABELS ----------------
 function mkLabel(kind,cls,html,pos,ids,fn,extra){const e=document.createElement('div');e.className='lab '+cls;e.innerHTML=html;e.style.display='none';e.onclick=fn;labelsEl.appendChild(e);LABELS.push(Object.assign({kind,el:e,pos,ids,shown:false},extra||{}));}
-function buildLabels(){const W3=(x,y,h)=>new THREE.Vector3(x-MW/2,h,y-MH/2),OVR={out:[24*MS,15*MS],fingers:[92.5*MS,54*MS]};
+function buildLabels(){const W3=(x,y,h)=>new THREE.Vector3(x-MW/2,h,y-MH/2),OVR={out:[48,30],fingers:[185,108]};
  D.forEach((d,i)=>{const s=ST[i],o=OVR[d.key],x=o?o[0]:s.sx/s.n,y=o?o[1]:s.sy/s.n;
   if(d.sub)mkLabel('sub','s',`<i style="background:${d.col};color:${d.col}"></i>${d.name}`,W3(x,y,d.lh),[i],()=>selDistrict(i));
   else mkLabel('d','d',`<span class="n" style="background:${d.col};box-shadow:0 0 10px ${d.col}">${d.num}</span><span>${d.name}</span>`,W3(x,y,d.lh),[i],()=>selDistrict(i));});
@@ -2708,8 +2693,8 @@ function buildLabels(){const W3=(x,y,h)=>new THREE.Vector3(x-MW/2,h,y-MH/2),OVR=
  LM.forEach(l=>{const d=D[ID[l.d]],cc=l.former?'#9aa0b8':d.col;mkLabel('lm','lm',`<i style="background:${cc};color:${cc}"></i>${l.name}${l.former?' <em>(former)</em>':''}${l.note?` <em>(${l.note})</em>`:''}`,l.pos,[ID[l.d]],()=>focusLM(l.id),{lm:l.id});});}
 const pv=new THREE.Vector3();
 function updLabels(){for(const L of LABELS){let vis;
-  if(L.kind==='d'||L.kind==='enc')vis=showLabels;else if(L.kind==='sub')vis=showLabels&&(radius<125||SEL.has(L.ids[0]));
-  else if(L.kind==='q')vis=showLabels&&(radius<95||SEL.has(FNG));else vis=showLM&&(radius<85||SEL.has(L.ids[0]));
+  if(L.kind==='d'||L.kind==='enc')vis=showLabels;else if(L.kind==='sub')vis=showLabels&&(radius<250||SEL.has(L.ids[0]));
+  else if(L.kind==='q')vis=showLabels&&(radius<190||SEL.has(FNG));else vis=showLM&&(radius<170||SEL.has(L.ids[0]));
   if(vis){pv.copy(L.pos).project(camera);if(pv.z>1||Math.abs(pv.x)>1.15||Math.abs(pv.y)>1.15)vis=false;}
   if(!vis){if(L.shown){L.el.style.display='none';L.shown=false;}continue;}
   if(!L.shown){L.el.style.display='';L.shown=true;}
@@ -2718,7 +2703,7 @@ function updLabels(){for(const L of LABELS){let vis;
 // ---------------- CONTROLS ----------------
 const ptrs=new Map(),ray=new THREE.Raycaster(),ndc=new THREE.Vector2();let mode=null,moved=0,pinch0=0,mid0=null,hover=null,hoverDirty=false;
 function updCam(){const sp=Math.sin(phi);camera.position.set(target.x+radius*sp*Math.sin(theta),radius*Math.cos(phi),target.z+radius*sp*Math.cos(theta));camera.lookAt(target);}
-function pan(dx,dy){const k=radius*.0016,ct=Math.cos(theta),st=Math.sin(theta);target.x=clamp(target.x+(-dx*ct-dy*st)*k,-95*MS,70*MS);target.z=clamp(target.z+(dx*st-dy*ct)*k,-72*MS,55*MS);}
+function pan(dx,dy){const k=radius*.0016,ct=Math.cos(theta),st=Math.sin(theta);target.x=clamp(target.x+(-dx*ct-dy*st)*k,-190,140);target.z=clamp(target.z+(dx*st-dy*ct)*k,-144,110);}
 // hover: a cheap ground-plane hit + the district map; click (precise): also tests the buildings, so clicking a tower picks its own district
 const GPL=new THREE.Plane(new THREE.Vector3(0,1,0),0),HP=new THREE.Vector3();
 function pickAt(cx,cy,precise){const r=el.getBoundingClientRect();ndc.set((cx-r.left)/r.width*2-1,-(cy-r.top)/r.height*2+1);ray.setFromCamera(ndc,camera);
@@ -2783,9 +2768,9 @@ addEventListener('keydown',e=>{if(e.metaKey||e.ctrlKey||e.altKey)return;const k=
 addEventListener('keydown',e=>{if(e.key==='Escape'){select([]);infoDefault();}});
 function doHover(){const d=pickAt(hover.x,hover.y);if(d===null){tip.style.opacity=0;el.style.cursor='grab';return;}const g=GROUPS[D[d].g];
  tip.innerHTML=`<b>${D[d].sub?D[d].short:D[d].num} · ${D[d].name}</b><span style="color:${g.col}">${g.name}</span>`;tip.style.transform=`translate(${hover.x+16}px,${hover.y+16}px)`;tip.style.opacity=1;el.style.cursor='pointer';}
-const homeR=()=>(VW/VH<1?185:118)*MS;
+const homeR=()=>VW/VH<1?370:236;
 $('toolbar').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const a=b.dataset.act;
- if(a==='reset')flyTo(58*MS,52*MS,homeR(),Math.round(theta/(2*Math.PI))*2*Math.PI,.92);
+ if(a==='reset')flyTo(116,104,homeR(),Math.round(theta/(2*Math.PI))*2*Math.PI,.92);
  else if(a==='rotate'){autoRot=!autoRot;b.classList.toggle('on',autoRot);}
  else if(a==='glow'){post.on=!post.on;b.classList.toggle('on',post.on);}
  else if(a==='beams'){post.beams=post.beams===false;b.classList.toggle('on',post.beams);SPOTS.forEach(s=>{if(!s.lh)s.p.visible=post.beams&&DN.day<.5;});}
@@ -2812,8 +2797,8 @@ function loop(now){requestAnimationFrame(loop);now=now||performance.now();
 // ---------------- QUALITY SETTINGS (Auto / Low / Medium / High) ----------------
 // Auto picks a level from the device and steps down if the frame rate stays under ~30 fps. ?quality=low|medium|high|auto in the URL forces a mode.
 const QL={low:{pr:.75,bloom:false,refl:false,shadow:0,flakes:5000,mist:false},
- medium:{pr:1.25,bloom:true,refl:true,shadow:1024,flakes:12000,mist:true},
- high:{pr:1.75,bloom:true,refl:true,shadow:2048,flakes:26000,mist:true}};
+ medium:{pr:1.25,bloom:true,refl:true,shadow:2048,flakes:12000,mist:true},
+ high:{pr:1.75,bloom:true,refl:true,shadow:4096,flakes:26000,mist:true}};
 const LV=['low','medium','high'];
 const Q=(()=>{const touch=('ontouchstart' in window)||navigator.maxTouchPoints>0,small=Math.min(screen.width,screen.height)<=820,mem=navigator.deviceMemory||8;
  const dev=touch&&small?'low':touch?'medium':mem<=4?'medium':'high',p=(new URLSearchParams(location.search).get('quality')||'').toLowerCase();
@@ -2824,7 +2809,7 @@ const qBtn=document.createElement('button');qBtn.dataset.act='quality';qBtn.titl
 // water reflections can be switched off: the sea then shows its own colour without the mirror pass
 const _renderRefl=renderRefl,BLACK=new THREE.DataTexture(new Uint8Array([0,0,0,255]),1,1,THREE.RGBAFormat);BLACK.needsUpdate=true;
 renderRefl=function(t){if(!water)return;const u=water.material.uniforms;if(Q.q.refl){if(REFL.rt)u.tR.value=REFL.rt.texture;_renderRefl(t);}else{u.t.value=t;u.tR.value=BLACK;}};
-function applyQuality(level){const q=QL[level];Q.cur=level;Q.q=q;LOQ.value=level==='low'?1:0;
+function applyQuality(level){const q=Object.assign({},QL[level]);q.shadow=Math.min(q.shadow,renderer.capabilities.maxTextureSize);Q.cur=level;Q.q=q;LOQ.value=level==='low'?1:0;
  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,q.pr));resize();
  post.on=q.bloom;document.querySelector('#toolbar [data-act="glow"]').classList.toggle('on',post.on);
  const sh=q.shadow>0;
@@ -2851,7 +2836,7 @@ resize();
 // To (re)bake: open the map with ?bake in the address — it builds live, then downloads the 4 files to upload into assets/.
 const BAKED={};
 function layoutFP(){const src=[classify,noisy,buildMaps,buildTexture,buildDayTexture,fbm,vnoise,hash,hx,mix].map(f=>f.toString()).join('|')+
-  JSON.stringify([MS,S,DS,D.map(d=>[d.key,d.seeds,d.w,d.st,d.col,d.g]),GROUPS,COAST0,PIER0,FINGERS0,ISLETS,CANALS,RII,BHS,['syndicate','velvets','unveiling','airport'].map(LMXY)]);
+  JSON.stringify([S,DS,D.map(d=>[d.key,d.seeds,d.w,d.st,d.col,d.g]),GROUPS,COAST,PIER,FINGERS,ISLETS,CANALS,RII,BHS,['syndicate','velvets','unveiling','airport'].map(LMXY)]);
  let h=2166136261;for(let i=0;i<src.length;i++){h^=src.charCodeAt(i);h=Math.imul(h,16777619);}return(h>>>0).toString(16).padStart(8,'0');}
 const ASSET=(n,fp)=>'assets/'+n+'-'+fp+(n.startsWith('ground')?'.jpg':'.png');
 function loadBaked(fp){const L=n=>new Promise(res=>{const im=new Image();im.onload=()=>res(im);im.onerror=()=>res(null);im.src=ASSET(n,fp);});
