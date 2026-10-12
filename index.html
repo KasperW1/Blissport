@@ -250,7 +250,9 @@ const LM=[
  // ver:'url' = only exists in the later (URL) version of the map
  {id:'landho',name:'Land Ho!',d:'piers',x:153.131707,y:150.314634,type:'landho',ex:.1,pin:3.2,ver:'url',note:'yachting club'},
  {id:'luckygem',name:'The Lucky Gem',d:'junction',x:87.8,y:89.2,type:'sapphire',ex:.1,pin:2,ver:'url'},
- {id:'highnote',name:'High Note',d:'sky',x:57.2,y:93.2,ex:.1,pin:2,ver:'url',note:'club'}];
+ {id:'highnote',name:'High Note',d:'sky',x:57.2,y:93.2,ex:.1,pin:2,ver:'url',note:'club'},
+ // lvl = stands on a URL-only levelled site (LEVELS); ex:0 = clears nothing at load, so the CIV city is untouched
+ {id:'venere',name:'Villa de Venere',d:'out',x:113.4,y:34.7,ex:0,pin:3.2,ver:'url',note:'club',lvl:1}];
 const LMXY=id=>{const l=LM.find(q=>q.id===id);return[l.x,l.y];},APT=LM.find(l=>l.id==='airport'),AP=(dx,dy)=>[APT.x+dx,APT.y+dy];
 // The Underpark (URL): Tin Yard, on its northern side toward Slag Town — placed clear of the Kennels and the Unveiling
 (()=>{const g=id=>LM.find(l=>l.id===id),kn=g('kennels'),un=g('unveiling'),mi=g('mist');if(!kn||!un||!mi)return;
@@ -316,7 +318,7 @@ function dragonMansion(x,y,did){
  box(PROP,G[0],G[1],.4,.3,.3,0,[.32,.3,.29],did,.12);LAMPS.push({x:G[0],y:G[1],h:.55,c:[1,.55,.22]});
  for(let q=0;q<6;q++){const a=q/6*6.283+.5,lx=G[0]+Math.cos(a)*1.55,ly=G[1]+Math.sin(a)*1.55;box(PROP,lx,ly,.12,.12,.2,0,[.5,.48,.45],did);box(PROP,lx,ly,.16,.16,.04,0,[.5,.48,.45],did,.2);LAMPS.push({x:lx,y:ly,h:.26,c:[1,.45,.18]});}
  return 6;}
-const EXC=LM.map(l=>({x:l.x,y:l.y,r:l.ex||1.25}));
+const EXC=LM.map(l=>({x:l.x,y:l.y,r:l.ex??1.25}));
 EXC.push({s:[...AP(-5.24,-.26),...AP(4.42,-2.84)],r:1.3},{s:[...BHS[0],...BHS[1]],r:.5},{x:APT.x,y:APT.y,r:1.7});
 function excluded(x,y){for(const e of EXC){if(e.s){if(segDist(x,y,e.s[0],e.s[1],e.s[2],e.s[3])<e.r)return true;}else{const dx=x-e.x,dy=y-e.y;if(dx*dx+dy*dy<e.r*e.r)return true;}}return false;}
 
@@ -590,6 +592,10 @@ function buildTexture(){if(BAKED.night)return BAKED.night;
 // BODY: buildings with lit windows · PROP: plain solids · ROOF: gables/sawtooth · CYL: tanks, chimneys, antennas · NEON: glowing tubes & signs
 const BODY=[],PROP=[],ROOF=[],CYL=[],NEON=[],TREES=[],LAMPS=[],BEAC=[],SKEL=[],BEAMS=[];
 const box=(L,x,y,w,dp,h,r,c,did,y0,ex)=>{const o={x,y,w,dp,h,r,c,did,y0:y0||0};if(ex)Object.assign(o,ex);L.push(o);return o;};
+// hipped roof (tiles slope down on all four sides, as on Roman and Italian buildings): a ridge prism plus two hip ends; ax 'x' or 'y' = ridge direction
+const HIPE=[];
+function hipRoof(x,y,W,L,H,ax,c,did,y0){L=Math.max(L,W);const k=(L-W)/2,ex=ax==='x';if(k>.001)box(ROOF,x,y,W,L-W,H,ex?Math.PI/2:0,c,did,y0);
+ for(const s of [-1,1])box(HIPE,x+(ex?s*k:0),y+(ex?0:s*k),W,W,H,ex?s*Math.PI/2:(s>0?0:Math.PI),c,did,y0);}
 const NC=['#ff2e93','#ff4fd8','#b14bff','#ff3b5c','#3df2ff','#ffd23f','#ff7a2e'].map(h=>n01(hx(h)));
 const TC={g:[[46,170,92],[16,96,50]],o:[[32,62,34],[14,34,20]],k:[[36,86,54],[16,48,30]]};
 function addT(x,y,s,k,did,y0){const p=TC[k];TREES.push({x,y,w:s,dp:s,h:s*1.3,r:rand()*6,c:n01(mix(p[0],p[1],rand())),did,y0:(y0||0)+.05});}
@@ -907,6 +913,7 @@ function lmBuild(l){const d=D[ID[l.d]],did=ID[l.d],x=l.x,y=l.y;let top=l.h||2;(w
  case 'underpark':{versioned('url',()=>{top=underPark(x,y,did);});break;}
  case 'glitchgarden':{versioned('url',()=>{top=glitchGarden(x,y,did);});break;}
  case 'bedtime':{versioned('url',()=>{top=bedTime(l,did);});break;}
+ case 'venere':{versioned('url',()=>{top=villaVenere(l,did);});break;}
  case 'lion':{const C=[.78,.72,.6],RF=[.22,.24,.28],GLD=[1,.78,.3],IRON=[.08,.08,.09],HEDGE=[.1,.28,.13],X1=x-6,X2=x+6,Y1=y-4.2,Y2=y+6.2,MY=y-1.2;
   // wrought-iron fence: two rails, close-set bars, cream stone pillars with lamps every few metres
   const fence=(ax,ay,bx,by)=>{const L=Math.hypot(bx-ax,by-ay),r=-Math.atan2(by-ay,bx-ax),mx=(ax+bx)/2,my=(ay+by)/2;
@@ -1331,7 +1338,7 @@ function terrain(){
    w=(Math.sin(s*.55+si*2.1)*.35+Math.sin(s*1.7+si)*.12)*Math.min(1,k/8,(n-k)/8);pts.push([v.x-dz/L*w,v.z+dx/L*w]);});
   ROADS.push(pts);pts.forEach(p=>{for(let oy=-2;oy<=2;oy++)for(let ox=-2;ox<=2;ox++)RG.add(ck(p[0]+ox*.5,p[1]+oy*.5));});});
  // houses (and their gardens) standing in a road's path give way to the road
- const LION=LM.find(l=>l.id==='lion'),DRAG=LM.find(l=>l.id==='dragon'),keepLM=b=>Math.hypot(b.x-LION.x,b.y-LION.y)<9.5||(DRAG&&Math.hypot(b.x-DRAG.x,b.y-DRAG.y)<8);
+ const LION=LM.find(l=>l.id==='lion'),DRAG=LM.find(l=>l.id==='dragon'),keepLM=b=>b.lvl||Math.hypot(b.x-LION.x,b.y-LION.y)<9.5||(DRAG&&Math.hypot(b.x-DRAG.x,b.y-DRAG.y)<8);
  for(const L of [BODY,ROOF,NEON,CYL,PROP,TREES,LAMPS])for(let i=L.length-1;i>=0;i--){const b=L[i];if(keepLM(b)||!RG.has(ck(b.x,b.y)))continue;if(L===LAMPS?distAt(b.x,b.y)===OUT:b.did===OUT)L.splice(i,1);}
  // ---- cut a gentle bench for the roads, then level a flat pad under every house and the two great estates
  const flat=(px,py,r1,r2,h0)=>{const gx0=Math.max(0,Math.floor((px-r2-X0)*2)),gx1=Math.min(GW-1,Math.ceil((px+r2-X0)*2)),gy0=Math.max(0,Math.floor((py-r2-Y0)*2)),gy1=Math.min(GH-1,Math.ceil((py+r2-Y0)*2));
@@ -1367,7 +1374,7 @@ function terrain(){
   DRV.push(pts);};
  pads.forEach((pd,i)=>{if(i<NP)drive(pd[0],pd[1],1.1);});drive(LION.x,LION.y+5.8,0);if(DRAG)drive(DRAG.x,DRAG.y+6.5,0);
  // dense forest: noise-driven density, pines more likely higher up, clearings left for fields, roads and estates kept free
- const estates=BODY.filter(b=>b.did===OUT).map(b=>[b.x,b.y]),[s0,a0,sw0]=D[OUT].st,ca=Math.cos(a0),sa=Math.sin(a0),CONES=[];
+ const estates=BODY.filter(b=>b.did===OUT&&!b.lvl).map(b=>[b.x,b.y]),[s0,a0,sw0]=D[OUT].st,ca=Math.cos(a0),sa=Math.sin(a0),CONES=[];
  const onRoad=(x,y)=>{const u=x*ca+y*sa,v=-x*sa+y*ca,du=((u%s0)+s0)%s0,dv=((v%s0)+s0)%s0;return du<sw0+.22||dv<sw0+.22||du>s0-.22||dv>s0-.22;};
  for(let q=0;q<208000;q++){const x=R(X0,X1),y=R(Y0,Y1);if(inMap(x,y)?(distAt(x,y)!==OUT||!landAt(x,y)):!landX(x,y))continue;
   const f=fbm(x*.07+3,y*.07+17),dens=f<.2?.12:1;if(rand()>dens)continue; // wooded almost everywhere, a few small meadows
@@ -1377,22 +1384,43 @@ function terrain(){
   else{const s=R(.5,.9);TREES.push({x,y,w:s,dp:s,h:s*1.25,r:rand()*6,c:n01(mix([34,82,40],[72,112,48],rand())),did:OUT,y0:.15});}}
  // lift everything standing in the outskirts onto the terrain (parts of one building share a footing height)
  const foot=(x,y)=>Math.min(hAt(x,y),hAt(x+1.2,y),hAt(x-1.2,y),hAt(x,y+1.2),hAt(x,y-1.2));
- for(const L of [BODY,PROP,ROOF,CYL,NEON,NCYL,SKEL])L.forEach(b=>{const h=foot(b.x,b.y);if(h>0)b.y0=(b.y0||0)+h-.03;});
- for(const L of [TREES,CONES])L.forEach(b=>{const h=hAt(b.x,b.y);if(h>0)b.y0+=h-.05;});
- for(const L of [LAMPS,BEAC])L.forEach(b=>{const h=hAt(b.x,b.y);if(h>0)b.h+=h;});
- LM.forEach(l=>{const h=foot(l.x,l.y);if(h>0)l.top+=h;});D[OUT].lh=hAt(48,30)+4;
+ for(const L of [BODY,PROP,ROOF,CYL,NEON,NCYL,SKEL,HIPE])L.forEach(b=>{if(b.lvl)return;const h=foot(b.x,b.y);if(h>0)b.y0=(b.y0||0)+h-.03;});
+ for(const L of [TREES,CONES])L.forEach(b=>{if(b.lvl)return;const h=hAt(b.x,b.y);if(h>0)b.y0+=h-.05;});
+ for(const L of [LAMPS,BEAC])L.forEach(b=>{if(b.lvl)return;const h=hAt(b.x,b.y);if(h>0)b.h+=h;});
+ LM.forEach(l=>{if(l.lvl)return;const h=foot(l.x,l.y);if(h>0)l.top+=h;});D[OUT].lh=hAt(48,30)+4;
+ // URL level sites (Villa de Venere): in URL the site is levelled into the hillside at the ground's own average height (cut above, fill below)
+ // and graded back into the hills over a short rim; CIV keeps its terrain. CIV things standing in the site, or on ground that moved, show in CIV only.
+ let HFU=null;const DCIV=new Set();
+ if(LEVELS.length){HFU=HF.slice();
+  DRV.forEach((pts,di)=>{if(LEVELS.some(V=>pts.some(p=>p[0]>V.x0-.5&&p[0]<V.x1+.5&&p[1]>V.y0-.5&&p[1]<V.y1+.5)))DCIV.add(di);});
+  const hU=(x,y)=>{const fx=clamp((x-X0)*2,0,GW-1.001),fy=clamp((y-Y0)*2,0,GH-1.001),ix=fx|0,iy=fy|0,tx=fx-ix,ty=fy-iy,i=iy*GW+ix;return(HFU[i]*(1-tx)+HFU[i+1]*tx)*(1-ty)+(HFU[i+GW]*(1-tx)+HFU[i+GW+1]*tx)*ty;},
+   near=P=>(x,y)=>{let m=1e9;for(const p of P){const q=(p[0]-x)**2+(p[1]-y)**2;if(q<m)m=q;}return Math.sqrt(m);},roadD=near(RP),driveD=near(DRV.filter((p,di)=>!DCIV.has(di)).flat());
+  for(const V of LEVELS){const rim=(x,y)=>Math.hypot(Math.max(V.x0-x,0,x-V.x1),Math.max(V.y0-y,0,y-V.y1)),site=(x,y,m)=>x>V.x0-m&&x<V.x1+m&&y>V.y0-m&&y<V.y1+m;
+   let sh=0,sn=0;for(let y=V.y0;y<=V.y1;y+=.5)for(let x=V.x0;x<=V.x1;x+=.5){sh+=hAt(x,y);sn++;}V.h0=sh/sn;
+   for(let gy=Math.max(0,Math.floor((V.y0-V.m2-Y0)*2));gy<=Math.min(GH-1,Math.ceil((V.y1+V.m2-Y0)*2));gy++)
+    for(let gx=Math.max(0,Math.floor((V.x0-V.m2-X0)*2));gx<=Math.min(GW-1,Math.ceil((V.x1+V.m2-X0)*2));gx++){const i=gy*GW+gx,x=X0+gx*.5,y=Y0+gy*.5,d=rim(x,y);
+     if(d>=V.m2||dc[i]===0)continue;const f=d<=V.m1?1:(1-ss(V.m1,V.m2,d))*ss(1,2.2,Math.min(roadD(x,y),driveD(x,y))); // roads and driveways keep their grade
+     HFU[i]+=(V.h0-HFU[i])*f;}
+   const moved=(x,y)=>site(x,y,.5)||(rim(x,y)<V.m2&&Math.abs(hU(x,y)-hAt(x,y))>.12);
+   civOnlyArea(moved);CONES.forEach(b=>{if(!b.ver&&moved(b.x,b.y))b.ver='civ';});
+   // the villa itself stands on the levelled ground
+   for(const L of [BODY,PROP,ROOF,CYL,NEON,NCYL,SKEL,TREES,HIPE])L.forEach(b=>{if(b.lvl===V)b.y0=(b.y0||0)+V.h0;});
+   for(const L of [LAMPS,BEAC])L.forEach(b=>{if(b.lvl===V)b.h+=V.h0;});(V.objs||[]).forEach(o=>o.position.y+=V.h0);LM.forEach(l=>{if(l.lvl===V)l.top+=V.h0;});
+   const T={road:(x,y)=>{let m=1e9,q=null;for(const p of RP){const d=(p[0]-x)**2+(p[1]-y)**2;if(d<m){m=d;q=p;}}return q;},
+    clear:test=>{civOnlyArea(test);CONES.forEach(b=>{if(!b.ver&&test(b.x,b.y))b.ver='civ';});}};
+   if(V.after)versioned('url',()=>V.after(hU,(x,y)=>!site(x,y,.5)&&moved(x,y)&&distAt(x,y)===OUT&&roadD(x,y)>1.2&&driveD(x,y)>.8,V,T));}}
  // clear garden trees off the driveways, then lay the driveway ribbons (draped on the terrain) with lamp posts
  for(let i=TREES.length-1;i>=0;i--)if(TREES[i].did===OUT&&DG.has(ck(TREES[i].x,TREES[i].y)))TREES.splice(i,1);
- const dpos=[],didx=[];
- DRV.forEach(pts=>{const b0=dpos.length/3;
+ const DP0=[],DI0=[],cpos=[],cidx=[]; // c…: CIV-only driveways (see DCIV)
+ DRV.forEach((pts,di)=>{const civ=DCIV.has(di),dpos=civ?cpos:DP0,didx=civ?cidx:DI0,b0=dpos.length/3;
   pts.forEach((q,k)=>{const a=pts[Math.max(0,k-1)],b=pts[Math.min(pts.length-1,k+1)],dx=b[0]-a[0],dy=b[1]-a[1],L=Math.hypot(dx,dy)||1,nx=-dy/L*.12,ny=dx/L*.12;
    for(const s of [-1,1]){const x=q[0]+nx*s,y=q[1]+ny*s;dpos.push(x-MW/2,hAt(x,y)+.03,y-MH/2);}});
   for(let k=0;k<pts.length-1;k++){const a=b0+k*2;didx.push(a,a+2,a+1,a+1,a+2,a+3);}
   for(let k=2;k<pts.length-1;k+=5){const a=pts[k-1],b=pts[k+1],dx=b[0]-a[0],dy=b[1]-a[1],L=Math.hypot(dx,dy)||1,s=(k/5|0)%2?1:-1,x=pts[k][0]-dy/L*.2*s,y=pts[k][1]+dx/L*.2*s,h=hAt(x,y);
-   CYL.push({x,y,w:.03,dp:.03,h:.42,r:0,c:[.22,.22,.24],did:OUT,y0:h});LAMPS.push({x,y,h:h+.44,c:[1,.8,.5]});}});
- const dgeo=new THREE.BufferGeometry();dgeo.setAttribute('position',new THREE.Float32BufferAttribute(dpos,3));dgeo.setIndex(didx);dgeo.computeVertexNormals();
- const dmesh=new THREE.Mesh(dgeo,new THREE.MeshLambertMaterial({color:0x8a8272,side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2}));
- dmesh.receiveShadow=true;scene.add(dmesh);
+   CYL.push({x,y,w:.03,dp:.03,h:.42,r:0,c:[.22,.22,.24],did:OUT,y0:h});LAMPS.push({x,y,h:h+.44,c:[1,.8,.5]});if(civ){CYL[CYL.length-1].ver='civ';LAMPS[LAMPS.length-1].ver='civ';}}});
+ const dmat=new THREE.MeshLambertMaterial({color:0x8a8272,side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});
+ for(const [P,I] of [[DP0,DI0],[cpos,cidx]]){if(!P.length)continue;const dgeo=new THREE.BufferGeometry();dgeo.setAttribute('position',new THREE.Float32BufferAttribute(P,3));dgeo.setIndex(I);dgeo.computeVertexNormals();
+  const dmesh=new THREE.Mesh(dgeo,dmat);dmesh.receiveShadow=true;if(P===cpos)dmesh.userData.ver='civ';scene.add(dmesh);}
  // the terrain mesh replaces the flat top of the map slab and uses the same ground material (streets, day/night)
  // uv = original map coordinates (beyond 0..1 in the new land strips; the ground shader fills those with fields)
  const g=new THREE.PlaneGeometry(X1-X0,Y1-Y0,GW-1,GH-1);g.rotateX(-Math.PI/2);const p=g.attributes.position,uv=g.attributes.uv;
@@ -1402,6 +1430,7 @@ function terrain(){
  const edgeL=scene.children.find(o=>o.isLineSegments&&o.geometry.type==='EdgesGeometry');
  if(edgeL){edgeL.geometry.dispose();edgeL.geometry=new THREE.EdgesGeometry(slab.geometry);edgeL.position.copy(slab.position);}
  const T=new THREE.Mesh(g,slab.material[2]);T.position.y=1.2;T.receiveShadow=true;T.castShadow=true;slab.add(T);
+ if(HFU)VER.terrain={T,civ:HF,url:HFU,cur:'civ'}; // applyVersion swaps the heights
  // the sea plane grows with the map (its land/water mask simply continues past the old edge)
  let wDone=false;FRAMEHOOKS.push(()=>{if(wDone||!water)return;wDone=true;const wg=new THREE.PlaneGeometry(X1-X0,Y1-Y0,1,1),wu=wg.attributes.uv;
   wu.setXY(0,X0/MW,1-Y0/MH);wu.setXY(1,X1/MW,1-Y0/MH);wu.setXY(2,X0/MW,1-Y1/MH);wu.setXY(3,X1/MW,1-Y1/MH);
@@ -1412,7 +1441,7 @@ function terrain(){
  const cm=new THREE.InstancedMesh(cg,new THREE.MeshLambertMaterial({emissive:0x050f08}),Math.max(1,CONES.length)),o=new THREE.Object3D(),c=new THREE.Color();cm.count=CONES.length;
  CONES.forEach((b,i)=>{o.position.set(b.x-MW/2,b.y0,b.y-MH/2);o.rotation.set(0,b.r,0);o.scale.set(b.w,b.h,b.dp);o.updateMatrix();cm.setMatrixAt(i,o.matrix);cm.setColorAt(i,c.setRGB(b.c[0],b.c[1],b.c[2]));});
  if(!CONES.length)cm.setColorAt(0,c.set(0));
- cm.instanceMatrix.needsUpdate=true;cm.castShadow=true;cm.receiveShadow=true;cm.frustumCulled=false;scene.add(cm);}
+ cm.instanceMatrix.needsUpdate=true;cm.castShadow=true;cm.receiveShadow=true;cm.frustumCulled=false;cm.userData.list=CONES;scene.add(cm);}
 // ---------------- THE PIERS: waterfront promenade, jetties, marina boats, pleasure pier ----------------
 let PROM=null;
 const HULL=[],SAIL=[];
@@ -1732,7 +1761,7 @@ function littlePalma(){const id=ID.lp,CX=125,CY=81,TERR=[.66,.36,.24],WHT=[.93,.
 // ---------------- MAP VERSIONS: CIV (original) and URL (later in the series) ----------------
 // Anything built inside versioned('url',…) only shows in URL; anything it replaces is tagged 'civ' and only shows in CIV.
 const VER={cur:(new URLSearchParams(location.search).get('version')||'').toLowerCase()==='url'?'url':'civ',ready:false,
- lists:[BODY,PROP,ROOF,CYL,NEON,NCYL,TREES,LAMPS,BEAC,SKEL,HULL,SAIL]};
+ lists:[BODY,PROP,ROOF,CYL,NEON,NCYL,TREES,LAMPS,BEAC,SKEL,HULL,SAIL,HIPE]};
 function versioned(ver,fn){const n0=VER.lists.map(L=>L.length),c0=scene.children.length;fn();
  VER.lists.forEach((L,i)=>{for(let k=n0[i];k<L.length;k++)L[k].ver=ver;});for(let k=c0;k<scene.children.length;k++)scene.children[k].userData.ver=ver;}
 function civOnlyArea(test){VER.lists.forEach(L=>L.forEach(b=>{if(!b.ver&&test(b.x,b.y))b.ver='civ';}));
@@ -1745,6 +1774,8 @@ function applyVersion(){const v=VER.cur;
  for(const Pt of scene.children.filter(o=>o.isPoints&&o.geometry.attributes.color)){const n=Pt.geometry.attributes.position.count,L=n===LAMPS.length?LAMPS:n===BEAC.length?BEAC:null;
   if(!L||!L.some(b=>b.ver))continue;const ca=Pt.geometry.attributes.color;if(!Pt.userData.vc)Pt.userData.vc=Float32Array.from(ca.array);
   L.forEach((b,i)=>{if(!b.ver)return;const k=b.ver===v?1:0,c=Pt.userData.vc;ca.setXYZ(i,c[i*3]*k,c[i*3+1]*k,c[i*3+2]*k);});ca.needsUpdate=true;}
+ const TV=VER.terrain;if(TV&&TV.cur!==v){TV.cur=v;const H=v==='url'?TV.url:TV.civ,g=TV.T.geometry,p=g.attributes.position;
+  for(let i=0;i<p.count;i++)p.setY(i,H[i]);p.needsUpdate=true;g.computeVertexNormals();g.computeBoundingSphere();}
  LABELS.forEach(L=>{const l=L.lm&&LM.find(q=>q.id===L.lm);if(!l||!l.ver)return;if(!L.pos0)L.pos0=L.pos.clone();L.pos.copy(l.ver===v?L.pos0:new THREE.Vector3(0,-1e5,0));});
  renderer.shadowMap.needsUpdate=true;
  if(SEL.size===1)infoDistrict([...SEL][0]);}
@@ -1912,6 +1943,122 @@ function highNote(x,y,did){
  const sN=new THREE.Color(0x8a8580),sD=new THREE.Color(0xffffff),gN=new THREE.Color(0x3a3020),gD=new THREE.Color(0x9a8a6a);
  VHOOKS.push(e=>{smat.color.copy(sN).lerp(sD,e);smat.emissiveIntensity=.8-.55*e;gm.color.copy(gN).lerp(gD,e);gm.emissiveIntensity=.9-.7*e;});
  return y0+H+1.2;}
+// ---------------- VILLA DE VENERE (URL) — a club in a Roman villa, its long walled estate set into the hills above Oak-Mount ----------------
+// The estate runs east–west along the hillside. South side (facing the city): the villa — the main house at the east end, its portico looking
+// down a long pool garden ringed by colonnades, an open loggia at the west end. North side (uphill): formal gardens, and beside the house
+// a small theatre for staged gladiator fights. West end: an entrance court behind the gate, reached by a drive from the country road.
+// Every roof (and every wall top) is red tile. It draws from its own random stream; its site is levelled in URL only (LEVELS, handled in terrain()).
+const LEVELS=[]; // URL-only levelled sites: footprint x0..x1 × y0..y1, flat margin m1, graded rim m2; terrain() sets h0 and calls after(hU,free,site,{road,clear}) for the rim
+function villaVenere(l,did){
+ // u runs east along the estate, v south across it; (0,0) is the landmark point
+ const CX=l.x,CY=l.y,vr=mulberry(7101953),VR=(a,b)=>a+(b-a)*vr(),U0=-8,U1=8,V0=-3.8,V1=3.8,GV=1.7, // GV: the main axis — gate, court, loggia, pool, portico
+  ST=[.9,.85,.74],TR=[.8,.36,.2],MB=[.95,.93,.88],PV=[.84,.8,.7],PATH=[.9,.86,.76],LAWN=[.3,.47,.24],HEDGE=[.13,.32,.16],CYP=[.09,.25,.13],BRZ=[.38,.27,.16],SAND=[.86,.74,.52],
+  GOLD=[1,.8,.45],TORCH=[1,.55,.2],PINK=[1,.42,.75];
+ const V={x0:CX+U0,y0:CY+V0,x1:CX+U1,y1:CY+V1,m1:.5,m2:2.6,gate:[CX+U0-.3,CY+GV],after:villaRim};LEVELS.push(V);l.lvl=V;
+ const n0=VER.lists.map(L=>L.length),c0=scene.children.length;
+ const B=(L,u,v,w,dp,h,r,c,y0,ex)=>box(L,CX+u,CY+v,w,dp,h,r,c,did,y0,ex),lamp=(u,v,h,c)=>LAMPS.push({x:CX+u,y:CY+v,h,c}),
+  tree=(u,v,w,h,c,y0)=>TREES.push({x:CX+u,y:CY+v,w,dp:w,h,r:vr()*6,c,did,y0:y0===undefined?.04:y0}),
+  cypress=(u,v)=>tree(u,v,VR(.2,.25),VR(.85,1.05),CYP.map(k=>k*VR(.85,1.15)),.04),
+  palm=(u,v,h)=>{B(CYL,u,v,.045,.045,h,0,[.42,.32,.22]);tree(u,v,.6,.16,[.14,.46,.2],h);},
+  hip=(u,v,W,L,H,ax,y0)=>hipRoof(CX+u,CY+v,W,L,H,ax,TR,did,y0),
+  // stucco wall with a red-tiled gable cap
+  wall=(u0,v0,u1,v1)=>{const L=Math.hypot(u1-u0,v1-v0),r=-Math.atan2(v1-v0,u1-u0),mu=(u0+u1)/2,mv=(v0+v1)/2;B(PROP,mu,mv,L,.16,.45,r,ST);B(ROOF,mu,mv,.3,L+.08,.13,r+Math.PI/2,TR,.45);},
+  bed=(u0,v0,u1,v1)=>{const cu=(u0+u1)/2,cv=(v0+v1)/2,w=u1-u0,dp=v1-v0;B(PROP,cu,cv,w,dp,.02,0,LAWN,.03);
+   for(const [pu,pv,ww,dd] of [[cu,v0,w,.08],[cu,v1,w,.08],[u0,cv,.08,dp],[u1,cv,.08,dp]])B(PROP,pu,pv,ww,dd,.1,0,HEDGE,.03);},
+  statue=(u,v,c)=>{B(PROP,u,v,.12,.12,.11,0,PV,.03);B(CYL,u,v,.055,.055,.18,0,c,.14);B(CYL,u,v,.04,.04,.045,0,c,.32);},
+  fountain=(u,v,d)=>{B(CYL,u,v,d,d,.13,0,PV,.03);NCYL.push({x:CX+u,y:CY+v,w:d-.12,dp:d-.12,h:.02,r:0,c:[.3,.75,.95],did,y0:.14});
+   B(CYL,u,v,.1,.1,.3,0,PV,.16);B(NEON,u,v,.035,.035,.18,0,[.75,.92,1],.46);lamp(u,v,.3,[.6,.85,1]);},
+  pavilion=(u,v)=>{B(PROP,u,v,.8,.8,.05,0,PV,.03);for(const [a,b] of [[-.32,-.32],[.32,-.32],[-.32,.32],[.32,.32]])B(CYL,u+a,v+b,.07,.07,.55,0,MB,.08);
+   B(PROP,u,v,.84,.84,.07,0,MB,.63);hip(u,v,1.02,1.02,.38,'x',.7);lamp(u,v,.4,PINK);};
+ // ground and walls: travertine over the whole estate, tile-capped walls, lamps along the outside; the gate is in the west wall on the main axis
+ B(PROP,0,0,U1-U0,V1-V0,.03,0,PV);
+ wall(U0,V0,U1,V0);wall(U1,V0,U1,V1);wall(U0,V1,U1,V1);wall(U0,V0,U0,GV-.6);wall(U0,GV+.6,U0,V1);
+ for(let u=U0+.8;u<U1;u+=1.6)for(const v of [V0-.14,V1+.14])lamp(u,v,.5,GOLD);
+ for(let v=V0+.8;v<V1;v+=1.6){lamp(U1+.14,v,.5,GOLD);if(Math.abs(v-GV)>.9)lamp(U0-.14,v,.5,GOLD);}
+ // the main house at the east end: two storeys of cream stucco under a hipped tile roof, a gilded cornice, doors onto the portico
+ const HU0=5.3,HU1=7.6,HV0=-.6,HV1=3.6,HCU=(HU0+HU1)/2,HCV=(HV0+HV1)/2;
+ B(BODY,HCU,HCV,HU1-HU0,HV1-HV0,1.3,0,ST,0,{win:[.8,0,.42]});hip(HCU,HCV,HU1-HU0+.26,HV1-HV0+.26,.62,'y',1.3);
+ B(NEON,HU0-.012,HCV,.02,HV1-HV0,.025,0,[1,.72,.42],1.27);B(NEON,HU0-.012,GV,.02,.42,.52,0,[1,.7,.4],.04);
+ // its portico onto the pool: marble columns two storeys tall, a balcony, a low tiled pediment
+ const PU=HU0-.3;
+ B(PROP,PU,GV,.6,2.9,.06,0,MB,.03);
+ for(let k=0;k<8;k++){const v=GV-1.33+k*.38;B(CYL,PU-.22,v,.085,.085,1.2,0,MB,.09);if(k<7)lamp(PU-.05,v+.19,.3,GOLD);}
+ B(PROP,PU,GV,.6,2.9,.05,0,MB,.62);B(PROP,PU-.27,GV,.03,2.9,.12,0,MB,.67);
+ B(PROP,PU,GV,.64,3,.1,0,MB,1.29);B(ROOF,PU,GV,3,.66,.3,Math.PI/2,TR,1.39);
+ for(const s of [-1,1])lamp(PU,GV+s*.8,.95,PINK);
+ // the peristyle: long covered walks on both sides (solid outer wall, columns toward the garden, tiled hipped roofs) and a loggia at the west end
+ const PU0=-4.4,PU1=PU-.3,PV0=-.2,PV1=3.6,WW=.62,PL=PU1-PU0,PCU=(PU0+PU1)/2;
+ for(const s of [-1,1]){const ov=s<0?PV0:PV1,cv=ov-s*WW/2,iv=ov-s*(WW-.06);
+  B(PROP,PCU,cv,PL,WW,.05,0,PV,.03);B(BODY,PCU,ov-s*.06,PL,.12,.62,0,ST,0,{win:[.55,0,.3]});
+  for(let u=PU0+.2;u<PU1-.1;u+=.32)B(CYL,u,iv,.07,.07,.55,0,MB,.06);
+  B(PROP,PCU,iv,PL,.1,.07,0,MB,.58);hip(PCU,cv,WW+.16,PL+.1,.27,'x',.64);
+  for(let u=PU0+.5;u<PU1-.2;u+=.64)lamp(u,iv-s*.1,.12,GOLD);}
+ const LU=PU0+.3,LW=PV1-PV0-2*WW;
+ B(PROP,LU,GV,.6,LW,.05,0,PV,.03);
+ for(const o of [-.26,.26]){for(let v=PV0+WW+.15;v<PV1-WW-.05;v+=.33)B(CYL,LU+o,v,.07,.07,.55,0,MB,.06);B(PROP,LU+o,GV,.1,LW,.07,0,MB,.58);}
+ hip(LU,GV,.78,LW+.12,.27,'y',.64);
+ // the long pool: travertine coping, glowing water with a thin pink neon rim, lights set into both edges
+ const QU0=LU+.75,QU1=PU1-.75,QCU=(QU0+QU1)/2,QL=QU1-QU0;
+ B(PROP,QCU,GV,QL+.2,1.1,.06,0,[.9,.87,.8],.03);B(NEON,QCU,GV,QL,.9,.015,0,[.22,.66,.86],.08);
+ outline(CX+QCU,CY+GV,QL+.02,.92,.09,0,PINK,did,.022);
+ for(let u=QU0+.35;u<QU1;u+=.75)for(const s of [-1,1])lamp(u,GV+s*.4,.1,[.45,.85,1]);
+ // hedged beds along both sides: bay trees and small palms; bronze statues along the water; Venus at the west end, lit pink
+ for(const s of [-1,1]){const bv=GV+s*.86;bed(QU0,bv-.28,QU1,bv+.28);
+  for(let u=QU0+.5;u<QU1-.3;u+=1.2)tree(u,bv,.3,.32,[.2,.4,.2].map(k=>k*VR(.85,1.15)),.05);
+  for(let u=QU0+1.1;u<QU1-.3;u+=2.4)palm(u,bv+s*.1,VR(.55,.7));
+  for(let u=QU0+.8;u<QU1-.3;u+=1.6)statue(u,GV+s*.48,BRZ);}
+ {const VU=QU0-.3;B(PROP,VU,GV,.3,.3,.24,0,MB,.03);B(CYL,VU,GV,.12,.1,.42,0,MB,.27);B(CYL,VU,GV,.08,.08,.09,0,MB,.69);lamp(VU+.22,GV,.15,PINK);lamp(VU-.22,GV,.15,PINK);}
+ // the entrance court between the gate and the loggia: a path on the main axis, a fountain, palms, a pavilion in the corner
+ const EU=(U0+PU0)/2;
+ B(PROP,EU,GV,PU0-U0-.2,.5,.02,0,PATH,.03);fountain(EU,GV,.9);
+ for(const [a,b] of [[-1.1,-1.2],[1.1,-1.2],[-1.1,1.25],[1.1,1.25]])palm(EU+a,GV+b,VR(.8,1));
+ pavilion(U0+.55,V1-.55);
+ // the gardens along the uphill side: a long path with a cypress allée, two cross paths with fountains, hedged lawns (olives uphill,
+ // reflecting basins below), palms, a pavilion in the north-west corner
+ const GA=-2,GU1=3.4,XP=[-5.2,-1];
+ B(PROP,(U0+GU1)/2,GA,GU1-U0-.3,.42,.02,0,PATH,.03);
+ for(const cu of XP){B(PROP,cu,(V0+PV0)/2,.42,PV0-V0-.2,.02,0,PATH,.03);fountain(cu,GA,.66);}
+ for(let u=U0+.6;u<GU1-.2;u+=.55)if(XP.every(cu=>Math.abs(u-cu)>.5))for(const s of [-1,1])cypress(u,GA+s*.3);
+ [[-6.9,-3.55,-5.55,-2.35],[-4.85,-3.55,-1.35,-2.35],[-.65,-3.55,3,-2.35],[-7.7,-1.65,-5.55,-.45],[-4.85,-1.65,-1.35,-.45],[-.65,-1.65,3,-.45]].forEach(([u0,v0,u1,v1],k)=>{
+  bed(u0,v0,u1,v1);const cu=(u0+u1)/2,cv=(v0+v1)/2;
+  if(k<3)for(let u=u0+.55;u<u1-.3;u+=1)tree(u,cv,.5,.42,[.43,.52,.38].map(c=>c*VR(.9,1.1)),.05);
+  else{const w=Math.min(1.6,u1-u0-.6);B(PROP,cu,cv,w,.5,.04,0,[.16,.42,.55],.03);B(NEON,cu,cv,w-.1,.4,.012,0,[.25,.6,.8],.06);}
+  palm(u1-.2,k<3?v0+.2:v1-.2,VR(.8,1));});
+ pavilion(U0+.55,V0+.55);
+ // the theatre beside the house: a semicircular stone cavea on the hill side, its sand arena opening toward the house; bronze gladiators,
+ // braziers, a gold-lit rim and a ring of torches
+ const TU=5.6,TV=-1.75,TN=4,STN=[.82,.78,.7];
+ B(CYL,TU,TV,1.72,1.72,.035,0,PV,.02);B(CYL,TU,TV,1.4,1.4,.04,0,SAND,.03);
+ for(let k=0;k<TN;k++){const rr=1+k*.24,n=Math.ceil(Math.PI*rr/.2)+2,a0=Math.PI-.18,da=(Math.PI+.36)/n;
+  for(let q=0;q<n;q++){const a=a0+(q+.5)*da;B(PROP,TU+Math.cos(a)*rr,TV+Math.sin(a)*rr,rr*da*1.06,.25,.09*(k+1),-(a+Math.PI/2),STN.map(c=>c*(k%2?1:.94)));}}
+ {const rr=1+(TN-1)*.24+.13,n=36,a0=Math.PI-.18,da=(Math.PI+.36)/n;
+  for(let q=0;q<n;q++){const a=a0+(q+.5)*da;B(NEON,TU+Math.cos(a)*rr,TV+Math.sin(a)*rr,rr*da*1.02,.025,.025,-(a+Math.PI/2),[1,.66,.3],.09*TN);}}
+ for(let q=0;q<6;q++){const a=Math.PI+.2+q*(Math.PI-.4)/5;if(Math.abs(a-1.5*Math.PI)<.25)continue;const pu=TU+Math.cos(a)*1.98,pv=TV+Math.sin(a)*1.98;
+  B(CYL,pu,pv,.035,.035,.75,0,[.2,.16,.12]);B(CYL,pu,pv,.09,.09,.06,0,BRZ,.75);lamp(pu,pv,.86,TORCH);}
+ for(const s of [-1,1]){B(CYL,TU+s*.95,TV+.55,.12,.12,.3,0,BRZ,.03);lamp(TU+s*.95,TV+.55,.42,TORCH);
+  const gu=TU+s*.24;B(CYL,gu,TV,.07,.07,.2,0,BRZ,.07);B(CYL,gu,TV,.05,.05,.06,0,[.85,.65,.25],.27);B(PROP,gu-s*.06,TV,.02,.11,.13,0,[.6,.12,.1],.1);}
+ lamp(TU,TV,.12,[1,.3,.2]);
+ // the gate: stucco pillars with fire bowls, a marble lintel under a small tiled roof, a red carpet between gold posts, the name in lit Roman capitals
+ for(const s of [-1,1]){const pv=GV+s*.55;B(PROP,U0,pv,.26,.26,.82,0,ST);B(PROP,U0,pv,.32,.32,.05,0,MB,.82);B(CYL,U0,pv,.13,.13,.06,0,BRZ,.87);lamp(U0,pv,1,TORCH);}
+ B(PROP,U0,GV,.22,1.36,.12,0,MB,.8);hip(U0,GV,.36,1.5,.2,'y',.92);B(NEON,U0-.12,GV,.02,.84,.03,0,PINK,.78);
+ B(PROP,U0-.33,GV,.5,.5,.012,0,[.6,.05,.1]);for(const s of [-1,1])for(let k=0;k<2;k++)B(CYL,U0-.15-k*.36,GV+s*.3,.03,.03,.28,0,[1,.78,.3]);
+ const name=g=>{const T='VILLA DE VENERE';let fs=64;const f=s=>`600 ${s}px Georgia,"Times New Roman",serif`;g.font=f(fs);while(g.measureText(T).width>480&&fs>20){fs-=2;g.font=f(fs);}
+  g.textAlign='center';g.textBaseline='middle';g.shadowColor='#ff4fb0';g.shadowBlur=22;g.fillStyle='#ffb8de';g.fillText(T,256,66);g.shadowBlur=4;g.fillStyle='#fff4fa';g.fillText(T,256,66);};
+ sign(name,CX+U0-.16,CY+GV,1.38,2.3,-Math.PI/2,'');
+ // and the name again on the south wall, facing the city
+ sign(name,CX,CY+V1+.14,.98,2.6,0,'');for(const s of [-1,1])B(CYL,s*1,V1+.1,.03,.03,.8,0,[.2,.18,.2]);
+ VER.lists.forEach((L,k)=>{for(let i=n0[k];i<L.length;i++)L[i].lvl=V;}); // terrain() sets it on its levelled ground
+ V.objs=scene.children.slice(c0);
+ return .95;}
+// the land around the villa (URL terrain): a gravel drive from the country road up to the gate, lined with cypresses (the forest gives way to it),
+// and umbrella pines and cypress pairs on the graded slopes where the old trees had to go
+function villaRim(hU,free,V,T){const vr=mulberry(1953710),VR=(a,b)=>a+(b-a)*vr(),[gx,gy]=V.gate,[rx,ry]=T.road(gx-.5,gy),L=Math.hypot(rx-gx,ry-gy),ux=(rx-gx)/L,uy=(ry-gy)/L,r=-Math.atan2(uy,ux);
+ T.clear((x,y)=>segDist(x,y,gx,gy,rx,ry)<.9);
+ for(let t=.15;t<L;t+=.3){const x=gx+ux*t,y=gy+uy*t;box(PROP,x,y,.34,.62,.06,r,[.72,.68,.6],OUT,hU(x,y)-.03);}
+ for(let t=.6;t<L-.4;t+=.8)for(const s of [-1,1]){const x=gx+ux*t-uy*s*.5,y=gy+uy*t+ux*s*.5;TREES.push({x,y,w:.22,dp:.22,h:VR(.85,1),r:vr()*6,c:[.09,.25,.13],did:OUT,y0:hU(x,y)+.03});}
+ for(let q=0,n=0;q<500&&n<16;q++){const x=VR(V.x0-V.m2,V.x1+V.m2),y=VR(V.y0-V.m2,V.y1+V.m2);if(!free(x,y)||segDist(x,y,gx,gy,rx,ry)<1)continue;n++;const h=hU(x,y);
+  if(vr()<.6){const t=VR(.9,1.2),w=VR(.9,1.25);box(CYL,x,y,.07,.07,t,0,[.42,.3,.2],OUT,h);TREES.push({x,y,w,dp:w*VR(.85,1),h:.3,r:vr()*6,c:[.2,.36,.2].map(v=>v*VR(.9,1.1)),did:OUT,y0:h+t-.08});}
+  else for(const o of [-.18,.18])TREES.push({x:x+o,y:y+VR(-.1,.1),w:.24,dp:.24,h:VR(.9,1.15),r:vr()*6,c:[.09,.25,.13],did:OUT,y0:h+.03});}}
 // ---------------- THE UNDERPARK (URL) — underground rave in an abandoned two-level parking garage ----------------
 // Sized like a real city-block garage (~2.2 x 1.7 units, two low levels); neighbouring buildings stand right up against it.
 function underPark(x,y,did){
@@ -2572,6 +2719,8 @@ if(vWin.z<.5&&vWinP.z>0.){vec2 g=vec2(vWin.x/(vWinP.z*.82),vWin.y/vWinP.z);vec2 
  totalEmissiveRadiance+=col*k*uWin;diffuseColor.rgb*=1.-m*.45*(1.-smoothstep(70.,175.,vWD));}`);
   m.userData.shader=s;};
  return m;}
+function hipEndGeo(){const v=[-.5,0,.5,.5,0,.5,0,1,0, -.5,0,0,-.5,0,.5,0,1,0, .5,0,.5,.5,0,0,0,1,0]; // half a pyramid: one hip and its two flanks
+ const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(v,3));g.computeVertexNormals();return g;}
 function prismGeo(){const v=[-.5,0,-.5,.5,0,-.5,0,1,-.5, -.5,0,.5,0,1,.5,.5,0,.5, -.5,0,-.5,0,1,-.5,0,1,.5, -.5,0,-.5,0,1,.5,-.5,0,.5, .5,0,-.5,.5,0,.5,0,1,.5, .5,0,-.5,0,1,.5,0,1,-.5];
  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(v,3));g.computeVertexNormals();return g;}
 function inst(list,geo,mat,shadow,win){const n=Math.max(1,list.length),m=new THREE.InstancedMesh(geo,mat,n),o=new THREE.Object3D(),c=new THREE.Color();m.count=list.length;
@@ -2613,6 +2762,7 @@ function assemble(){
  REFL.hide=scene.children.filter(o=>o===slab||o===edge||o===grid||o===water||(o.isMesh&&o.geometry&&o.geometry.type==='PlaneGeometry'&&o.position.y<.2));
  renderer.shadowMap.autoUpdate=false;renderer.shadowMap.needsUpdate=true;
  DIMS=[[bodyM,.3],[propM,.3],[roofM,.3],[cylM,.3],[neonM,.12],[treeM,.3],[ncylM,.12]];
+ DIMS.push([inst(HIPE,hipEndGeo(),roofM.material,true),.3]); // hip ends share the tiled roof material
  const pts=(list,size,mat)=>{const p=new Float32Array(list.length*3),c=new Float32Array(list.length*3);list.forEach((l,i)=>{p.set([l.x-MW/2,l.h,l.y-MH/2],i*3);c.set(l.c||[1,.15,.15],i*3);});
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(p,3));g.setAttribute('color',new THREE.BufferAttribute(c,3));const P=new THREE.Points(g,mat);scene.add(P);return P;};
  const gt=glowTex([[0,'rgba(255,255,255,1)'],[.22,'rgba(255,255,255,.5)'],[1,'rgba(255,255,255,0)']],64);
