@@ -1269,7 +1269,8 @@ function paintCity(){
  VHOOKS.push(e=>nm.forEach(([m,c])=>m.color.copy(c).multiplyScalar(.25+.75*e)));
  // landmarks keep their hand-picked colours unless they have a material override here
  const LMP={menagerie:{c:['#7d756a','#8a8174','#6f685e','#958b7c'],r:['#3a3e46','#30343b','#41454c'],s:5,g:.45}};
- const lmAt=b=>{for(let i=0;i<LM.length;i++){const l=LM[i];if(Math.hypot(b.x-l.x,b.y-l.y)<EXC[i].r+.25)return l;}return null;};
+ const lmAt=b=>{if(b.lvl)return LM.find(l=>l.lvl===b.lvl)||null; // parts of a landmark on a levelled site (Villa de Venere)
+  for(let i=0;i<LM.length;i++){const l=LM[i];if(Math.hypot(b.x-l.x,b.y-l.y)<EXC[i].r+.25)return l;}return null;};
  const A=new Float32Array(Math.max(1,BODY.length)*3);
  BODY.forEach((b,i)=>{const d=D[b.did];if(!d||!landAt(b.x,b.y))return;const l=lmAt(b);let P=PAL[d.key];
   if(l){if(!LMP[l.id])return;P=LMP[l.id];}if(!P)return;
@@ -1281,6 +1282,8 @@ function paintCity(){
  ROOF.forEach(b=>{const d=D[b.did];if(!d)return;const l=lmAt(b);let P=PAL[d.key];if(l){if(!LMP[l.id])return;P=LMP[l.id];}if(!P)return;
   const h=hash(Math.round(b.x*100)+5,Math.round(b.y*100)),col=n01(hx(P.r[(h*P.r.length)|0])).map(v=>v*.9);b.pal=col;b.pn=mix(b.c,col.map(v=>v*.25),.5);});
  CYL.forEach(b=>{const l=lmAt(b);if(l&&l.id==='menagerie'&&b.w>.5){b.pal=n01(hx('#857c70'));b.pn=b.pal.map(v=>v*.2);}});
+ // Villa de Venere: its stucco and red tile keep their own colours by day, the same as its hip-roof ends (which never take a day palette)
+ for(const L of [BODY,ROOF])L.forEach(b=>{if(b.lvl&&!b.pal){b.pal=b.c.slice();b.pn=b.c.slice();}});
  // slate / tile texture on every pitched roof: staggered courses with gaps, per-tile tone variation
  const rm=DIMS[2][0].material;
  rm.onBeforeCompile=s=>{
@@ -2993,7 +2996,9 @@ function loadBaked(fp){const L=n=>new Promise(res=>{const im=new Image();im.onlo
  return Promise.all(['land','districts','ground-night','ground-day'].map(L)).then(([la,di,gn,gd])=>{
   if(!la||!di||!gn||!gd||la.width!==PW||la.height!==PH||di.width!==DW||di.height!==DH)return;
   const px=im=>{const c=document.createElement('canvas');c.width=im.width;c.height=im.height;const g=c.getContext('2d');g.drawImage(im,0,0);return g.getImageData(0,0,c.width,c.height).data;};
-  const a=px(la),b=px(di);BAKED.land=new Uint8Array(PW*PH);for(let i=0;i<PW*PH;i++)BAKED.land[i]=a[i*4]>127?1:0;
+  // opened straight from disk (file://), the browser won't let the page read pixels of local images: generate live instead
+  let a,b;try{a=px(la);b=px(di);}catch(e){console.info('Blissport: pre-built assets could not be read here (page opened as a local file?) — ground generated live. Serve the folder over http to use them.');return;}
+  BAKED.land=new Uint8Array(PW*PH);for(let i=0;i<PW*PH;i++)BAKED.land[i]=a[i*4]>127?1:0;
   BAKED.dist=new Int8Array(DW*DH);for(let i=0;i<DW*DH;i++)BAKED.dist[i]=Math.round(b[i*4]/12); // ids stored ×12 so small colour shifts can't change them
   BAKED.night=gn;BAKED.day=gd;});}
 function bakeAssets(fp){
